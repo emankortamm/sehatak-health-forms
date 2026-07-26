@@ -623,10 +623,10 @@ body {
             <label>صورة الروشتة المصروفة <span class="req">*</span></label>
             <div class="upload-area" id="prescriptionArea">
               <div class="upload-icon">📸</div>
-              <div class="upload-text">اضغط لالتقاط أو رفع صورة الروشتة<br><small>JPG / PNG — حد أقصى 5MB</small></div>
+              <div class="upload-text">اضغط لالتقاط أو رفع صورة الروشتة<br><small>JPG / PNG / PDF — حد أقصى 5MB</small></div>
               <div class="file-name" id="prescriptionName"></div>
               <img class="file-preview" id="prescriptionPreview" alt="معاينة الروشتة">
-              <input type="file" accept="image/*" capture="environment" id="prescription_input" onchange="handlePrescriptionFile(this)">
+              <input type="file" accept="image/*,application/pdf" id="prescription_input" onchange="handlePrescriptionFile(this)">
             </div>
             <span class="field-error" id="e_prescription">يرجى رفع صورة الروشتة</span>
           </div>
@@ -764,21 +764,29 @@ function handlePrescriptionFile(inp) {
     inp.value = '';
     return;
   }
-  const process = f => {
-    $('prescriptionName').textContent = '📎 ' + f.name;
-    $('prescriptionName').style.display = 'block';
-    const r = new FileReader();
-    r.onload = ev => {
-      $('prescriptionPreview').src = ev.target.result;
-      $('prescriptionPreview').style.display = 'block';
-      updateProgress();
-    };
-    r.readAsDataURL(f);
-  };
-  if (file.size > 1024 * 1024) {
-    compressImage(file, 0.7).then(compressed => { inp._compressed = compressed; process(compressed); }).catch(() => process(file));
+  $('prescriptionName').textContent = '📎 ' + file.name;
+  $('prescriptionName').style.display = 'block';
+  if (file.type === 'application/pdf') {
+    $('prescriptionPreview').style.display = 'none';
+    $('prescriptionPreview').src = '';
+    inp._compressed = null;
+    updateProgress();
   } else {
-    process(file);
+    const process = f => {
+      const r = new FileReader();
+      r.onload = ev => {
+        $('prescriptionPreview').src = ev.target.result;
+        $('prescriptionPreview').style.display = 'block';
+        updateProgress();
+      };
+      r.readAsDataURL(f);
+    };
+    if (file.size > 1024 * 1024) {
+      compressImage(file, 0.7).then(compressed => { inp._compressed = compressed; process(compressed); }).catch(() => process(file));
+    } else {
+      inp._compressed = null;
+      process(file);
+    }
   }
 }
 
@@ -799,9 +807,27 @@ function addMedication() {
         <label>مصدر الدواء <span class="req">*</span></label>
         <select name="med_source_${medCount}" onchange="onSourceChange(this, '${medCount}')">
           <option value="">— اختر المصدر —</option>
+          <option value="تبرعات عينية من المقر الإداري">تبرعات عينية من المقر الإداري</option>
           <option value="تبرعات عينية من المقر">تبرعات عينية من المقر</option>
           <option value="تبرعات عينية من الشراكات">تبرعات عينية من الشراكات</option>
           <option value="شراء">شراء</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row single" id="muqar_row_${medCount}" style="display:none">
+      <div class="field">
+        <label>المقر <span class="req">*</span></label>
+        <select name="med_muqar_${medCount}" id="med_muqar_${medCount}">
+          <option value="">— اختر المقر —</option>
+          <option>شبين الكوم</option>
+          <option>منوف</option>
+          <option>أشمون</option>
+          <option>بركة السبع</option>
+          <option>قويسنا</option>
+          <option>تلا</option>
+          <option>الشهداء</option>
+          <option>الباجور</option>
+          <option>مدينة السادات</option>
         </select>
       </div>
     </div>
@@ -884,16 +910,19 @@ function onSourceChange(sel, idx) {
   const val = sel.value;
   const simple = $('simple_' + idx);
   const cascade = $('cascade_' + idx);
+  const muqarRow = $('muqar_row_' + idx);
+  const muqarSel = $('med_muqar_' + idx);
   if (val === 'تبرعات عينية من المقر') {
     simple.style.display = 'none';
     cascade.style.display = 'block';
+    muqarRow.style.display = 'block';
+    muqarSel.value = '';
     fetchDrugSummary(idx);
-  } else if (val) {
-    cascade.style.display = 'none';
-    simple.style.display = 'block';
   } else {
-    simple.style.display = 'none';
     cascade.style.display = 'none';
+    simple.style.display = val ? 'block' : 'none';
+    muqarRow.style.display = 'none';
+    muqarSel.value = '';
   }
 }
 
@@ -1113,11 +1142,12 @@ $('mainForm').addEventListener('submit', async function(e) {
       const med_type = item.querySelector('[name^="med_cs_type_"]')?.value?.trim();
       const med_exp = item.querySelector('[name^="med_cs_exp_"]')?.value?.trim();
       const med_qty = item.querySelector('[name^="cs_qty_"]')?.value?.trim();
-      if (!med_name || !med_form || !med_conc || !med_type || !med_exp || !med_qty) { medErrors = true; return; }
+      const med_muqar = item.querySelector('[name^="med_muqar_"]')?.value?.trim();
+      if (!med_name || !med_form || !med_conc || !med_type || !med_exp || !med_qty || !med_muqar) { medErrors = true; return; }
       var medQty = parseInt(med_qty);
       var maxStock = parseInt($('cs_stock_' + item.id.split('_')[1])?._maxQty) || 0;
       if (medQty > maxStock) { showErr('e_cs_qty_' + item.id.split('_')[1], 'الكمية (' + medQty + ') تتجاوز المخزون (' + maxStock + ')'); medErrors = true; return; }
-      medications.push({ med_name, med_form, med_conc, med_type, med_exp, med_qty: medQty, med_source });
+      medications.push({ med_name, med_form, med_conc, med_type, med_exp, med_qty: medQty, med_source, med_muqar });
     } else {
       const med_name = item.querySelector('[name^="med_name_"]')?.value?.trim();
       const med_qty = item.querySelector('[name^="med_qty_"]')?.value?.trim();
@@ -1198,8 +1228,8 @@ addMedication();
 updateProgress();
 
 // ---- offline utils ----
-var CSV_FIELDS = ['patient_name','national_id','integer_wa4xt75','center','med_name','med_qty','med_source','med_form','med_conc','med_type','med_exp'];
-var CSV_HEADERS = ['اسم الحالة','الرقم القومي','المبلغ الكلي','المركز','اسم الدواء','كمية الدواء','مصدر الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء'];
+var CSV_FIELDS = ['patient_name','national_id','integer_wa4xt75','center','med_name','med_qty','med_source','med_muqar','med_form','med_conc','med_type','med_exp'];
+var CSV_HEADERS = ['اسم الحالة','الرقم القومي','المبلغ الكلي','المركز','اسم الدواء','كمية الدواء','مصدر الدواء','المقر','شريط/علبة','التركيز','النوع','تاريخ الانتهاء'];
 
 function collectFormData() {
   var patient_name = $('patient_name')?.value?.trim();
@@ -1218,7 +1248,8 @@ function collectFormData() {
         med_conc: item.querySelector('[name^="med_cs_conc_"]')?.value?.trim() || '',
         med_type: item.querySelector('[name^="med_cs_type_"]')?.value?.trim() || '',
         med_exp: item.querySelector('[name^="med_cs_exp_"]')?.value?.trim() || '',
-        med_source: source
+        med_source: source,
+        med_muqar: item.querySelector('[name^="med_muqar_"]')?.value?.trim() || ''
       });
     } else {
       meds.push({
@@ -1235,10 +1266,10 @@ function flattenData(d) {
   var rows = [];
   var base = { patient_name:d.patient_name, national_id:d.national_id, integer_wa4xt75:d.integer_wa4xt75, center:d.center };
   if (!d.medications || !d.medications.length) {
-    rows.push(Object.assign({}, base, {med_name:'',med_qty:'',med_source:'',med_form:'',med_conc:'',med_type:'',med_exp:''}));
+    rows.push(Object.assign({}, base, {med_name:'',med_qty:'',med_source:'',med_muqar:'',med_form:'',med_conc:'',med_type:'',med_exp:''}));
   } else {
     d.medications.forEach(function(m) {
-      rows.push(Object.assign({}, base, {med_name:m.med_name,med_qty:m.med_qty,med_source:m.med_source,med_form:m.med_form||'',med_conc:m.med_conc||'',med_type:m.med_type||'',med_exp:m.med_exp||''}));
+      rows.push(Object.assign({}, base, {med_name:m.med_name,med_qty:m.med_qty,med_source:m.med_source,med_muqar:m.med_muqar||'',med_form:m.med_form||'',med_conc:m.med_conc||'',med_type:m.med_type||'',med_exp:m.med_exp||''}));
     });
   }
   return rows;
@@ -1287,6 +1318,8 @@ function importCSVData(headers, rows) {
           if (csExp && row['تاريخ الانتهاء']) csExp.value = row['تاريخ الانتهاء'];
           var csQty = item.querySelector('[name^="cs_qty_"]');
           if (csQty && row['كمية الدواء']) csQty.value = row['كمية الدواء'];
+          var muqar = item.querySelector('[name^="med_muqar_"]');
+          if (muqar && row['المقر']) muqar.value = row['المقر'];
         }, 500);
       }
     }
@@ -1322,6 +1355,8 @@ window.fillFormFromLocal = function(row) {
         if (csExp) csExp.value = m.med_exp || '';
         var csQty = item.querySelector('[name^="cs_qty_"]');
         if (csQty) csQty.value = m.med_qty || '';
+        var muqar = item.querySelector('[name^="med_muqar_"]');
+        if (muqar) muqar.value = m.med_muqar || '';
       }, 500);
     } else {
       var nm = item.querySelector('[name^="med_name_"]');
