@@ -76,8 +76,8 @@ const FORMS = {
   },
   masroufat: {
     tab: 'مصروفات الحالات',
-    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','المبلغ','المركز','اسم الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء','الكمية','مصدر الدواء','صورة الروشتة'],
-    fields: ['_id','_timestamp','patient_name','national_id','amount','center','med_name','med_form','med_conc','med_type','med_exp','med_qty','med_source','prescription_photo_url'],
+    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','المبلغ','المركز','اسم الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء','الكمية','مصدر الدواء','المقر','صورة الروشتة'],
+    fields: ['_id','_timestamp','patient_name','national_id','amount','center','med_name','med_form','med_conc','med_type','med_exp','med_qty','med_source','med_muqar','prescription_photo_url'],
     hasImages: true,
     imageFields: ['prescription_photo'],
     subfolder: 'مصروفات الحالات'
@@ -352,10 +352,10 @@ function handleMasroufat(data, sheet, config, recordId, timestamp, folder) {
   const imgUrl = data.prescription_photo ? saveBase64Image(data.prescription_photo, 'مصروفات_' + recordId, folder) : '';
   const meds = data.medications_group || [];
   if (meds.length === 0) {
-    sheet.appendRow([recordId, timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', '', '', '', '', '', '', '', imgUrl]);
+    sheet.appendRow([recordId, timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', '', '', '', '', '', '', '', '', imgUrl]);
   } else {
     meds.forEach(function(m, i) {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', imgUrl]);
+      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', m.med_muqar||'', imgUrl]);
     });
   }
   return respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', count: meds.length });
