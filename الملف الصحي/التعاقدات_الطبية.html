@@ -521,10 +521,10 @@ body {
             <label>صورة العقد</label>
             <div class="upload-area" id="contractArea">
               <div class="upload-icon">📄</div>
-              <div class="upload-text">اضغط لرفع صورة العقد (اختياري)<br><small>JPG / PNG — حد أقصى 5MB</small></div>
+              <div class="upload-text">اضغط لرفع صورة أو ملف PDF للعقد (اختياري)<br><small>JPG / PNG / PDF — حد أقصى 5MB</small></div>
               <div class="file-name" id="contractName"></div>
               <img class="file-preview" id="contractPreview" alt="معاينة العقد">
-              <input type="file" id="contractFile" accept="image/*" capture="environment"
+              <input type="file" id="contractFile" accept="image/*,.pdf"
                      onchange="handleFile(this, 'contractName', 'contractPreview', 'e_contract_photo', 'contractArea')">
               <span class="field-error" id="e_contract_photo"></span>
             </div>
@@ -658,7 +658,9 @@ function handleFile(inp, nameId, prevId, errId, areaId) {
     inp.value = '';
     return;
   }
-  if (file.size > 1024 * 1024) {
+  if (file.type === 'application/pdf') {
+    showFileInfo(file, nameId, prevId, errId);
+  } else if (file.size > 1024 * 1024) {
     compressImage(file, 0.7).then(compressed => {
       inp._compressed = compressed;
       showFileInfo(compressed, nameId, prevId, errId);
@@ -672,13 +674,18 @@ function showFileInfo(f, nameId, prevId, errId) {
   $(nameId).textContent = '📎 ' + f.name;
   $(nameId).style.display = 'block';
   hideErr(errId);
-  const r = new FileReader();
-  r.onload = ev => { const i = $(prevId); i.src = ev.target.result; i.style.display = 'block'; };
-  r.readAsDataURL(f);
+  if (f.type === 'application/pdf') {
+    $(prevId).style.display = 'none';
+  } else {
+    const r = new FileReader();
+    r.onload = ev => { const i = $(prevId); i.src = ev.target.result; i.style.display = 'block'; };
+    r.readAsDataURL(f);
+  }
   updateProgress();
 }
 
 function compressImage(file, quality) {
+  if (file.type === 'application/pdf') return Promise.resolve(file);
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

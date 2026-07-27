@@ -682,7 +682,9 @@ function handlePrescFile(inp, prescId) {
   const nameEl = $('pn_' + prescId);
   const prevEl = $('pp_' + prescId);
   const errEl = $('pe_' + prescId);
-  if (file.size > 1024 * 1024) {
+  if (file.type === 'application/pdf') {
+    showPrescFileInfo(file, nameEl, prevEl, errEl);
+  } else if (file.size > 1024 * 1024) {
     compressImage(file, 0.7).then(compressed => {
       inp._compressed = compressed;
       showPrescFileInfo(compressed, nameEl, prevEl, errEl);
@@ -696,13 +698,18 @@ function showPrescFileInfo(f, nameEl, prevEl, errEl) {
   nameEl.textContent = '📎 ' + f.name;
   nameEl.style.display = 'block';
   hideErr(errEl.id);
-  const r = new FileReader();
-  r.onload = ev => { prevEl.src = ev.target.result; prevEl.style.display = 'block'; };
-  r.readAsDataURL(f);
+  if (f.type === 'application/pdf') {
+    prevEl.style.display = 'none';
+  } else {
+    const r = new FileReader();
+    r.onload = ev => { prevEl.src = ev.target.result; prevEl.style.display = 'block'; };
+    r.readAsDataURL(f);
+  }
   updateProgress();
 }
 
 function compressImage(file, quality) {
+  if (file.type === 'application/pdf') return Promise.resolve(file);
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -750,10 +757,10 @@ function addPrescription() {
         <label>صورة الروشتة <span class="req">*</span></label>
         <div class="upload-area" id="pa_${prescCount}">
           <div class="upload-icon">📄</div>
-          <div class="upload-text">اضغط لرفع صورة الروشتة<br><small>JPG / PNG — حد أقصى 5MB</small></div>
+          <div class="upload-text">اضغط لاختيار صورة أو ملف PDF للروشتة<br><small>JPG / PNG / PDF — حد أقصى 5MB</small></div>
           <div class="file-name" id="pn_${prescCount}"></div>
           <img class="file-preview" id="pp_${prescCount}" alt="معاينة الروشتة">
-          <input type="file" accept="image/*" capture="environment"
+          <input type="file" accept="image/*,.pdf"
                  onchange="handlePrescFile(this, ${prescCount})">
         </div>
         <span class="field-error" id="pe_${prescCount}">يرجى رفع صورة الروشتة</span>

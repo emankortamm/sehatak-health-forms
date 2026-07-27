@@ -76,8 +76,8 @@ const FORMS = {
   },
   masroufat: {
     tab: 'مصروفات الحالات',
-    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','المبلغ','المركز','اسم الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء','الكمية','مصدر الدواء','المقر','صورة الروشتة'],
-    fields: ['_id','_timestamp','patient_name','national_id','amount','center','med_name','med_form','med_conc','med_type','med_exp','med_qty','med_source','med_muqar','prescription_photo_url'],
+    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','المبلغ','المركز','اسم الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء','الكمية','مصدر الدواء','المركز المانح','صورة الروشتة'],
+    fields: ['_id','_timestamp','patient_name','national_id','amount','center','med_name','med_form','med_conc','med_type','med_exp','med_qty','med_source','donor_center','prescription_photo_url'],
     hasImages: true,
     imageFields: ['prescription_photo'],
     subfolder: 'مصروفات الحالات'
@@ -355,7 +355,7 @@ function handleMasroufat(data, sheet, config, recordId, timestamp, folder) {
     sheet.appendRow([recordId, timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', '', '', '', '', '', '', '', '', imgUrl]);
   } else {
     meds.forEach(function(m, i) {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', m.med_muqar||'', imgUrl]);
+      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', m.donor_center||'', imgUrl]);
     });
   }
   return respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', count: meds.length });
@@ -380,9 +380,18 @@ function saveBase64Image(base64Str, fileName, parentFolder) {
   if (!base64Str) return '';
   try {
     let data = base64Str;
-    if (data.includes(',')) data = data.split(',')[1];
+    let mimeType = 'image/jpeg';
+    let ext = '.jpg';
+    if (data.includes(',')) {
+      const header = data.split(',')[0];
+      data = data.split(',')[1];
+      if (header.includes('application/pdf')) { mimeType = 'application/pdf'; ext = '.pdf'; }
+      else if (header.includes('image/png')) { mimeType = 'image/png'; ext = '.png'; }
+      else if (header.includes('image/gif')) { mimeType = 'image/gif'; ext = '.gif'; }
+      else if (header.includes('image/webp')) { mimeType = 'image/webp'; ext = '.webp'; }
+    }
     const bytes = Utilities.base64Decode(data);
-    const blob = Utilities.newBlob(bytes, 'image/jpeg', fileName + '.jpg');
+    const blob = Utilities.newBlob(bytes, mimeType, fileName + ext);
     const file = parentFolder.createFile(blob);
     return file.getUrl();
   } catch (e) {
