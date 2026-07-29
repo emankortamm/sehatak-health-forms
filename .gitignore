@@ -1,4 +1,25 @@
-/*
+*
+*/
 !.gitignore
-!الملف الصحي/
-!الملف الصحي/**
+!Code.gs
+!create_shortcuts.ipynb
+!create_shortcuts.py
+!index.html
+!logo-alt.jpg
+!logo.jpg
+!offline-utils.js
+!أدوية_القوافل.html
+!استعلامات_الأدوية.html
+!استعلامات_القوافل.html
+!الاستمارات.html
+!التحويلات_الطبية.html
+!التعاقدات_الطبية.html
+!الدليل_التشغيلي.html
+!المساعدات_الطبية.html
+!حصر_الأدوية.html
+!صرف_أدوية_القوافل.html
+!مصروفات_الحالات.html
+!نتائج_القوافل.html
+!نواقص_الصرف_الشهري.html
+!AI style/
+!AI style/**
