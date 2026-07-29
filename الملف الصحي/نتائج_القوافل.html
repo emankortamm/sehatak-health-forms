@@ -1,0 +1,898 @@
+﻿?<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="offline-utils.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نتائج القوافل الطبية — صناع الحياة المنوفية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #0f766e;
+  --primary-dim: rgba(15,118,110,0.12);
+  --primary-glow: rgba(15,118,110,0.08);
+  --primary-hover: #0d5e5e;
+  --secondary: #b8944a;
+  --secondary-dim: rgba(184,148,74,0.12);
+  --accent: #10b981;
+  --alert: #ef4444;
+  --bg: #070b18;
+  --bg2: #0e1628;
+  --bg3: #141e36;
+  --bg4: #1a2645;
+  --card: #141e36;
+  --card-hover: #1a2645;
+  --border: rgba(184,148,74,0.1);
+  --border-focus: #0f766e;
+  --text: #e8e2d6;
+  --text2: #9a8e7a;
+  --text3: #6a5f50;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-full: 999px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.25);
+  --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::selection { background: var(--primary); color: #fff; }
+.premium-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+  height: 32px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(135deg, var(--primary), #0d5e5e);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.premium-bar .bar-icon { font-size: 0.75rem; opacity: 0.9; }
+body { padding-top: 32px; }
+.geo-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; opacity: 0.2;
+}
+.geo-bg::before {
+  content: ''; position: absolute; inset: -50%;
+  background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M60 0l14.6 44.7L120 60l-45.4 15.3L60 120 45.4 75.3 0 60l45.4-15.3z' fill='none' stroke='rgba(184,148,74,0.04)' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  animation: geoDrift 80s linear infinite;
+  opacity: 0.4;
+}
+@keyframes geoDrift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+.page { position: relative; z-index: 2; }
+body {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+.header {
+  background: linear-gradient(135deg, #0d1321 0%, #1a212e 50%, #0d1321 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 32px 20px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: -100px; left: -100px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; right: -80px;
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.brand-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 900;
+  padding: 6px 18px;
+  border-radius: var(--radius-full);
+  margin-bottom: 12px;
+  box-shadow: 0 0 20px rgba(239,68,68,0.4), 0 0 40px rgba(245,158,11,0.2);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  letter-spacing: 1px;
+  animation: brandPulse 2s ease-in-out infinite;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+@keyframes brandPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,0.4), 0 0 40px rgba(245,158,11,0.2); }
+  50% { box-shadow: 0 0 30px rgba(239,68,68,0.6), 0 0 60px rgba(245,158,11,0.3); }
+}
+.brand-banner-bottom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ec4899, #ef4444, #f59e0b);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 12px rgba(239,68,68,0.3);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255,255,255,0.15);
+  margin-top: 6px;
+}
+.brand-sep {
+  width: 2px;
+  height: 14px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 1px;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15,118,110,0.1);
+  border: 1px solid rgba(15,118,110,0.2);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+}
+.header h1 {
+  font-family: 'Cairo', sans-serif;
+  font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+.header p {
+  font-size: 0.85rem;
+  color: var(--text2);
+  font-weight: 400;
+}
+.header-divider {
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: var(--radius-full);
+  margin: 14px auto 0;
+}
+.progress-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+.progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  width: 0%;
+  transition: width 0.5s ease;
+}
+.main { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+.alert {
+  background: var(--warn-bg);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-right: 3px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: #fcd34d;
+}
+.alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.section:hover { border-color: rgba(15,118,110,0.3); }
+.section-header {
+  font-family: 'Cairo', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+.section-header .icon { font-size: 1.1rem; }
+.section-header .badge {
+  margin-right: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text3);
+  background: var(--bg4);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+.section-body { padding: 18px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.field-row:last-child { margin-bottom: 0; }
+.field-row.single { grid-template-columns: 1fr; }
+@media (max-width: 540px) { .field-row { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field label .req { color: var(--danger); }
+.field input, .field select, .field textarea {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.86rem;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--bg3);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+.field input.error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important; background: rgba(239,68,68,0.05) !important; }
+.field input.valid { border-color: var(--accent) !important; background: rgba(16,185,129,0.05) !important; }
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  padding-left: 36px;
+}
+.field-hint { font-size: 0.72rem; color: var(--text3); margin-top: 1px; }
+.field-error { font-size: 0.72rem; color: var(--danger); margin-top: 2px; display: none; }
+.specialty-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.specialty-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.specialty-num {
+  background: var(--bg4);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+.btn-remove {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(239,68,68,0.2);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-remove:hover { background: rgba(239,68,68,0.2); }
+.btn-add {
+  width: 100%;
+  background: var(--bg3);
+  border: 1.5px dashed var(--border);
+  color: var(--primary);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.83rem;
+  font-weight: 700;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.btn-add:hover { border-color: var(--primary); background: rgba(15,118,110,0.08); }
+.btn-submit {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 900;
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(15,118,110,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all var(--transition);
+  margin-top: 20px;
+}
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(15,118,110,0.35);
+}
+.btn-submit:active:not(:disabled) { transform: translateY(0); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.spinner {
+  width: 18px; height: 18px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.overlay.show { display: flex; }
+.overlay-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 24px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes popIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+.overlay-card .ov-icon { font-size: 3rem; margin-bottom: 12px; }
+.overlay-card h2 { font-family: 'Cairo', sans-serif; font-size: 1.15rem; font-weight: 900; margin-bottom: 8px; color: #fff; }
+.overlay-card p { font-size: 0.85rem; color: var(--text2); line-height: 1.75; margin-bottom: 18px; }
+.overlay-card.success .ov-icon ~ h2 { color: var(--accent); }
+.overlay-card.danger .ov-icon ~ h2 { color: var(--danger); }
+.btn-overlay {
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+.btn-overlay.primary { background: var(--primary); color: #fff; }
+.btn-overlay.primary:hover { background: var(--primary-hover); }
+.btn-overlay.danger { background: var(--danger); color: #fff; }
+.btn-overlay.danger:hover { background: #dc2626; }
+.footer {
+  text-align: center;
+  padding: 24px 16px 16px;
+  color: var(--text3);
+  font-size: 0.78rem;
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+}
+.footer strong { color: var(--text2); }
+.status-msg {
+  display: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  margin-bottom: 14px;
+  text-align: center;
+  font-weight: 600;
+}
+.status-msg.info { display: block; background: rgba(15,118,110,0.1); border: 1px solid rgba(15,118,110,0.2); color: var(--primary); }
+.status-msg.err { display: block; background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.2); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="premium-bar">
+  <span class="bar-icon">◈</span>
+  <span>منظومة الملف الطبي — صناع الحياة المنوفية</span>
+</div>
+<div class="geo-bg"></div>
+<div class="grain"></div>
+
+<div class="page">
+
+<div class="header">
+    <div class="logo-frame" style="display:flex;justify-content:center;padding:6px;border:1px solid var(--border);border-radius:12px;background:rgba(14,22,40,0.6);margin-bottom:14px;">
+      <img src="logo.jpg" alt="صناع الحياة" style="height:80px;width:auto;border-radius:8px;display:block;">
+    </div>
+  <div class="header-badge">🏥 الملف الطبي — التحول الرقمي</div>
+  <h1>نتائج القوافل الطبية</h1>
+  <p>جمعية صناع الحياة — محافظة المنوفية</p>
+  <div class="header-divider"></div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<div class="main">
+
+  <div class="status-msg" id="statusMsg"></div>
+
+  <form id="mainForm" novalidate>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="icon">📍</span> بيانات القافلة
+        <span class="badge">إلزامي</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row single">
+          <div class="field">
+            <label>المركز <span class="req">*</span></label>
+            <select id="center">
+<option value="">— اختر المركز —</option>
+<option>مركزي</option>
+<option>شبين الكوم</option>
+              <option>منوف</option>
+              <option>أشمون</option>
+              <option>بركة السبع</option>
+              <option>قويسنا</option>
+              <option>تلا</option>
+              <option>الشهداء</option>
+              <option>الباجور</option>
+
+              <option>السادات</option>
+            </select>
+            <span class="field-error" id="e_center">يرجى اختيار المركز</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>عدد الكشوفات الإجمالي <span class="req">*</span></label>
+            <input type="number" id="total_checkups" placeholder="إجمالي عدد الكشوفات" min="0">
+            <span class="field-error" id="e_total_checkups">يرجى إدخال عدد الكشوفات الإجمالي</span>
+          </div>
+          <div class="field">
+            <label>عدد التحاليل <span class="req">*</span></label>
+            <input type="number" id="total_labs" placeholder="عدد التحاليل التي تم إجراؤها" min="0">
+            <span class="field-error" id="e_total_labs">يرجى إدخال عدد التحاليل</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>التدخلات الصحية الأخرى (وصف)</label>
+            <textarea id="other_interventions" placeholder="وصف التدخلات الصحية الأخرى إن وجدت" rows="3"></textarea>
+          </div>
+          <div class="field">
+            <label>عدد التدخلات الصحية الأخرى</label>
+            <input type="number" id="other_interventions_count" placeholder="عدد التدخلات" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="icon">🩺</span> التخصصات
+        <span class="badge">إلزامي — يمكن إضافة أكثر من تخصص</span>
+      </div>
+      <div class="section-body">
+        <div id="specialtiesList"></div>
+        <button type="button" class="btn-add" onclick="addSpecialty()">＋ إضافة تخصص آخر</button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit" id="submitBtn">
+      <span class="spinner" id="submitSpinner"></span>
+      <span id="submitText">💾 حفظ وتسجيل النتائج</span>
+    </button>
+
+  </form>
+
+  <div class="footer">
+    <div class="brand-banner-bottom">✨ OP_IT_MLM <span class="brand-sep"></span> كريم شعير ✨</div>
+    <div style="margin-top:8px"><strong>الملف الطبي</strong> — صناع الحياة المنوفية<br>
+    التحول الرقمي © 2026</div>
+  </div>
+</div>
+
+<div class="overlay" id="successOverlay">
+  <div class="overlay-card success">
+    <div class="ov-icon">✅</div>
+    <h2>تم الحفظ بنجاح</h2>
+    <p id="successMsg">تم تسجيل نتائج القافلة بنجاح.</p>
+    <button class="btn-overlay primary" onclick="resetForm()">تسجيل قافلة جديدة</button>
+  </div>
+</div>
+
+<div class="overlay" id="errorOverlay">
+  <div class="overlay-card danger">
+    <div class="ov-icon">⚠️</div>
+    <h2>حدث خطأ</h2>
+    <p id="errorMsg">تعذّر الاتصال بالخادم. يرجى المحاولة مرة أخرى.</p>
+    <button class="btn-overlay danger" onclick="closeOverlay('errorOverlay')">إعادة المحاولة</button>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzTkmFGEYZHEhQssU38zv65WZcQ4MqWMeIWI2vUmG8JpBIQjpwCnBUg846RSNMtTEFW/exec";
+
+const $ = id => document.getElementById(id);
+const show = (id, v) => $(id).style.display = v || 'block';
+const hide = id => $(id).style.display = 'none';
+const showErr = (id, msg) => { const e = $(id); e.textContent = msg || e.textContent; e.style.display = 'block'; };
+const hideErr = id => { const e = $(id); if(e) e.style.display = 'none'; };
+const hideAllErrs = () => document.querySelectorAll('.field-error').forEach(e => e.style.display = 'none');
+
+function updateProgress() {
+  const fields = ['center','total_checkups','total_labs'];
+  const filled = fields.filter(id => {
+    const el = $(id);
+    return el && el.value && el.value.trim();
+  }).length;
+  const specs = $('specialtiesList')?.children?.length || 0;
+  const done = filled + (specs > 0 ? 1 : 0);
+  const max = fields.length + 1;
+  $('progressBar').style.width = Math.round(done / max * 100) + '%';
+}
+document.querySelectorAll('input,select,textarea').forEach(el => el.addEventListener('input', updateProgress));
+
+let specCount = 0;
+
+function addSpecialty() {
+  specCount++;
+  const div = document.createElement('div');
+  div.className = 'specialty-item';
+  div.id = 'spec_' + specCount;
+  div.innerHTML = `
+    <div class="specialty-header">
+      <span class="specialty-num">🩺 تخصص #${specCount}</span>
+      ${specCount > 1 ? `<button type="button" class="btn-remove" onclick="removeSpecialty('spec_${specCount}')">🗑 حذف</button>` : ''}
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>التخصص <span class="req">*</span></label>
+        <select name="specialty">
+          <option value="">— اختر التخصص —</option>
+          <option>باطنة</option>
+          <option>أطفال</option>
+          <option>عظام</option>
+          <option>أنف وأذن</option>
+          <option>نساء وتوليد</option>
+          <option>أسنان</option>
+          <option>مخ وأعصاب</option>
+          <option>رمد</option>
+          <option>جلدية</option>
+          <option>قلب</option>
+          <option>جراحة</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>اسم الدكتور <span class="req">*</span></label>
+        <input type="text" name="doctor_name" placeholder="اسم الدكتور">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>عدد الكشوفات للدكتور <span class="req">*</span></label>
+        <input type="number" name="spec_checkups" placeholder="عدد الكشوفات" min="0">
+      </div>
+      <div class="field">
+        <label>الوقت المستغرق (ساعات) <span class="req">*</span></label>
+        <input type="number" name="time_spent" placeholder="الوقت المستغرق بالساعات" min="0" step="0.5">
+      </div>
+    </div>`;
+  $('specialtiesList').appendChild(div);
+  div.querySelectorAll('input,select').forEach(el => el.addEventListener('input', updateProgress));
+  updateProgress();
+}
+
+function removeSpecialty(id) { $(id)?.remove(); updateProgress(); }
+
+function showOverlay(id) { $(id).classList.add('show'); }
+function closeOverlay(id) { $(id).classList.remove('show'); }
+function showStatus(msg, isErr) {
+  const s = $('statusMsg');
+  s.textContent = msg;
+  s.className = 'status-msg ' + (isErr ? 'err' : 'info');
+}
+function hideStatus() { $('statusMsg').style.display = 'none'; }
+
+function resetForm() {
+  closeOverlay('successOverlay');
+  closeOverlay('errorOverlay');
+  $('mainForm').reset();
+  $('specialtiesList').innerHTML = '';
+  document.querySelectorAll('.field-error').forEach(e => e.style.display = 'none');
+  document.querySelectorAll('.error,.valid').forEach(e => e.classList.remove('error','valid'));
+  hideStatus();
+  specCount = 0;
+  updateProgress();
+  addSpecialty();
+}
+
+$('mainForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  hideStatus();
+  hideAllErrs();
+  let valid = true;
+
+  const center = $('center').value;
+  const total_checkups = $('total_checkups').value.trim();
+  const total_labs = $('total_labs').value.trim();
+  const other_interventions = $('other_interventions').value.trim();
+  const other_interventions_count = $('other_interventions_count').value.trim();
+
+  if (!center) { showErr('e_center'); valid = false; }
+  if (!total_checkups || parseInt(total_checkups) < 0) { showErr('e_total_checkups'); valid = false; }
+  if (!total_labs || parseInt(total_labs) < 0) { showErr('e_total_labs'); valid = false; }
+
+  const specSelects = [...document.querySelectorAll('[name="specialty"]')];
+  const specDoctors = [...document.querySelectorAll('[name="doctor_name"]')];
+  const specCheckups = [...document.querySelectorAll('[name="spec_checkups"]')];
+  const specTimes = [...document.querySelectorAll('[name="time_spent"]')];
+
+  if (!specSelects.length || specSelects.some(s => !s.value) || specDoctors.some(d => !d.value.trim()) || specCheckups.some(c => !c.value.trim()) || specTimes.some(t => !t.value.trim())) {
+    valid = false;
+    if (!valid) alert('⚠️ يرجى إدخال بيانات التخصصات كاملة');
+  }
+  if (!valid) return;
+
+  const btn = $('submitBtn');
+  const spin = $('submitSpinner');
+  const btnTxt = $('submitText');
+  btn.disabled = true;
+  spin.style.display = 'inline-block';
+  btnTxt.textContent = '⏳ جارٍ الحفظ...';
+  showStatus('جارٍ إرسال البيانات... برجاء الانتظار');
+
+  const specialties = specSelects.map((s, i) => ({
+    specialty: s.value,
+    doctor_name: specDoctors[i].value.trim(),
+    spec_checkups: specCheckups[i].value.trim(),
+    time_spent: specTimes[i].value.trim()
+  }));
+
+  const payload = {
+    action: 'nata2_alqawafel',
+    center,
+    total_checkups,
+    total_labs,
+    other_interventions,
+    other_interventions_count,
+    specialties
+  };
+
+  try {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        showStatus(`جارٍ الإرسال... المحاولة ${attempt}/3`);
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        btn.disabled = false; spin.style.display = 'none';
+        btnTxt.textContent = '💾 حفظ وتسجيل النتائج';
+        hideStatus();
+
+        if (data.status === 'success') {
+          $('successMsg').textContent = `تم تسجيل نتائج قافلة "${center}" بنجاح`;
+          showOverlay('successOverlay');
+          return;
+        } else {
+          throw new Error(data.message || 'خطأ غير معروف');
+        }
+      } catch (err) {
+        lastErr = err;
+        console.error('Attempt ' + attempt + ' failed:', err);
+        if (attempt < 3) {
+          showStatus(`⚠️ فشلت المحاولة ${attempt}، إعادة المحاولة...`, true);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+    throw lastErr;
+  } catch (err) {
+    btn.disabled = false; spin.style.display = 'none';
+    btnTxt.textContent = '💾 حفظ وتسجيل النتائج';
+    hideStatus();
+    console.error('Submit error:', err);
+    $('errorMsg').textContent = 'تعذّر الاتصال: ' + (err.message || 'خطأ في الشبكة') + '. تأكد من اتصال الإنترنت وحاول مرة أخرى.';
+    showOverlay('errorOverlay');
+  }
+});
+
+addSpecialty();
+updateProgress();
+
+// ---- offline utils ----
+var CSV_FIELDS = ['center','total_checkups','total_labs','other_interventions','other_interventions_count','specialty','doctor_name','spec_checkups','time_spent'];
+var CSV_HEADERS = ['المركز','عدد الكشوفات الإجمالي','عدد التحاليل','التدخلات الصحية الأخرى','عدد التدخلات','التخصص','اسم الدكتور','عدد الكشوفات للدكتور','الوقت المستغرق'];
+
+
+function collectFormData() {
+  var center = $('center')?.value;
+  var total_checkups = $('total_checkups')?.value?.trim();
+  var total_labs = $('total_labs')?.value?.trim();
+  var other_interventions = $('other_interventions')?.value?.trim();
+  var other_interventions_count = $('other_interventions_count')?.value?.trim();
+  var items = document.querySelectorAll('.specialty-item');
+  if (!center && !total_checkups && !items.length) return null;
+  var specs = [];
+  items.forEach(function(item) {
+    specs.push({
+      specialty: item.querySelector('[name="specialty"]')?.value || '',
+      doctor_name: item.querySelector('[name="doctor_name"]')?.value?.trim() || '',
+      spec_checkups: item.querySelector('[name="spec_checkups"]')?.value?.trim() || '',
+      time_spent: item.querySelector('[name="time_spent"]')?.value?.trim() || ''
+    });
+  });
+  return { center:center, total_checkups:total_checkups, total_labs:total_labs, other_interventions:other_interventions, other_interventions_count:other_interventions_count, specialties:specs };
+}
+
+function flattenData(d) {
+  var rows = [];
+  var base = { center:d.center, total_checkups:d.total_checkups, total_labs:d.total_labs, other_interventions:d.other_interventions, other_interventions_count:d.other_interventions_count };
+  if (!d.specialties || !d.specialties.length) {
+    var r = Object.assign({}, base, {specialty:'',doctor_name:'',spec_checkups:'',time_spent:''});
+    rows.push(r);
+  } else {
+    d.specialties.forEach(function(s) {
+      rows.push(Object.assign({}, base, {specialty:s.specialty,doctor_name:s.doctor_name,spec_checkups:s.spec_checkups,time_spent:s.time_spent}));
+    });
+  }
+  return rows;
+}
+
+function importCSVData(headers, rows) {
+  var colMap = {};
+  CSV_HEADERS.forEach(function(h, i) {
+    var idx = headers.findIndex(function(ch) { return ch.trim() === h; });
+    if (idx >= 0) colMap[h] = idx;
+  });
+  if (Object.keys(colMap).length < 2) { showTooltip('❌ تنسيق CSV غير متطابق', true); return; }
+  $('specialtiesList').innerHTML = '';
+  specCount = 0;
+  rows.forEach(function(vals, ri) {
+    var row = {};
+    CSV_HEADERS.forEach(function(h) { row[h] = vals[colMap[h]] || ''; });
+    if (ri === 0) {
+      if (row['المركز']) $('center').value = row['المركز'];
+      if (row['عدد الكشوفات الإجمالي']) $('total_checkups').value = row['عدد الكشوفات الإجمالي'];
+      if (row['عدد التحاليل']) $('total_labs').value = row['عدد التحاليل'];
+      if (row['التدخلات الصحية الأخرى']) $('other_interventions').value = row['التدخلات الصحية الأخرى'];
+      if (row['عدد التدخلات']) $('other_interventions_count').value = row['عدد التدخلات'];
+    }
+    if (ri > 0) addSpecialty();
+    var items = document.querySelectorAll('.specialty-item');
+    var item = items[items.length - 1];
+    if (item) {
+      var inp = item.querySelectorAll('[name="specialty"],[name="doctor_name"],[name="spec_checkups"],[name="time_spent"]');
+      if (inp[0]) inp[0].value = row['التخصص'] || '';
+      if (inp[1]) inp[1].value = row['اسم الدكتور'] || '';
+      if (inp[2]) inp[2].value = row['عدد الكشوفات للدكتور'] || '';
+      if (inp[3]) inp[3].value = row['الوقت المستغرق'] || '';
+    }
+  });
+  updateProgress();
+  showTooltip('✅ تم استيراد ' + rows.length + ' سجل');
+}
+
+window.fillFormFromLocal = function(row) {
+  if (row.center) $('center').value = row.center;
+  if (row.total_checkups) $('total_checkups').value = row.total_checkups;
+  if (row.total_labs) $('total_labs').value = row.total_labs;
+  if (row.other_interventions) $('other_interventions').value = row.other_interventions;
+  if (row.other_interventions_count) $('other_interventions_count').value = row.other_interventions_count;
+  $('specialtiesList').innerHTML = ''; specCount = 0;
+  if (row.specialties) row.specialties.forEach(function(s) {
+    addSpecialty();
+    var item = document.querySelector('.specialty-item:last-child');
+    if (!item) return;
+    var inp = item.querySelectorAll('[name="specialty"],[name="doctor_name"],[name="spec_checkups"],[name="time_spent"]');
+    if (inp[0]) inp[0].value = s.specialty || '';
+    if (inp[1]) inp[1].value = s.doctor_name || '';
+    if (inp[2]) inp[2].value = s.spec_checkups || '';
+    if (inp[3]) inp[3].value = s.time_spent || '';
+  });
+  updateProgress();
+  showTooltip('✅ تم تحميل البيانات من السجلات المحفوظة');
+};
+var _origSho = showOverlay;
+showOverlay = function(id) {
+  if (id === 'successOverlay') {
+    var d = collectFormData();
+    if (d) { saveLocal('nata2_alqawafel', d); updateLocalCount('nata2_alqawafel'); }
+  }
+  _origSho(id);
+};
+
+initOffline('nata2_alqawafel', 'نتائج القوافل', CSV_FIELDS, CSV_HEADERS);
+
+window.exportFormCSV = function(fid, flabel, fields, headers) {
+  var data = getLocalData(fid);
+  if (!data.length) { alert('⚠️ لا توجد بيانات محفوظة'); return; }
+  var flat = [];
+  data.forEach(function(d) { flat = flat.concat(flattenData(d)); });
+  if (!flat.length) { alert('⚠️ لا توجد بيانات'); return; }
+  var csv = CSV_HEADERS.join(',') + '\n';
+  flat.forEach(function(r) { csv += CSV_FIELDS.map(function(f) { return escapeCSV(r[f]); }).join(',') + '\n'; });
+  downloadBlob(csv, flabel + '_' + new Date().toISOString().slice(0,10) + '.csv', 'text/csv');
+};
+window.exportFormXLS = function(fid, flabel, fields, headers) {
+  var data = getLocalData(fid);
+  if (!data.length) { alert('⚠️ لا توجد بيانات محفوظة'); return; }
+  var flat = [];
+  data.forEach(function(d) { flat = flat.concat(flattenData(d)); });
+  if (!flat.length) { alert('⚠️ لا توجد بيانات'); return; }
+  var table = '<table dir="rtl" style="font-family:sans-serif;font-size:12px;border-collapse:collapse;width:100%;direction:rtl"><thead><tr style="background:#0f766e;color:#fff">';
+  headers.forEach(function(h) { table += '<th style="padding:8px 10px;border:1px solid #ddd;text-align:right">' + h + '</th>'; });
+  table += '</tr></thead><tbody>';
+  flat.forEach(function(r, ri) {
+    table += '<tr' + (ri % 2 ? ' style="background:#f5f5f5"' : '') + '>';
+    fields.forEach(function(f) { table += '<td style="padding:6px 10px;border:1px solid #ddd;text-align:right">' + (r[f] !== undefined && r[f] !== null ? r[f] : '') + '</td>'; });
+    table += '</tr>';
+  });
+  table += '</tbody></table>';
+  downloadXLS(table, flabel + '_' + new Date().toISOString().slice(0,10) + '.csv');
+};
+window.downloadCSVTemplate = function(flabel) { downloadCSVTemplate(flabel, CSV_FIELDS, CSV_HEADERS); };
+</script>
+</div>
+</body>
+</html>
+
