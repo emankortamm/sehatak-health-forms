@@ -357,18 +357,63 @@ function readExcelFile(file) {
   });
 }
 
+function _normHeader(h) {
+  return String(h == null ? '' : h).toLowerCase()
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+    .replace(/[^\u0600-\u06FF\u0041-\u005A\u0061-\u007A\u0030-\u0039]+/g, '');
+}
+
+function matchHeaders(excelHeaders) {
+  var target = (typeof window !== 'undefined' && window.CSV_HEADERS && window.CSV_HEADERS.length) ? window.CSV_HEADERS : null;
+  if (!target) return { headers: excelHeaders, matched: 0 };
+  var used = new Array(target.length).fill(false);
+  var mapped = excelHeaders.slice();
+  var matchedCount = 0;
+  excelHeaders.forEach(function(h, i) {
+    var n = _normHeader(h);
+    if (!n) return;
+    for (var t = 0; t < target.length; t++) {
+      if (!used[t] && n === _normHeader(target[t])) { mapped[i] = target[t]; used[t] = true; matchedCount++; return; }
+    }
+  });
+  excelHeaders.forEach(function(h, i) {
+    if (mapped[i] !== h) return;
+    var n = _normHeader(h);
+    if (!n) return;
+    var best = -1, bestLen = 0;
+    for (var t = 0; t < target.length; t++) {
+      if (used[t]) continue;
+      var nt = _normHeader(target[t]);
+      if (!nt) continue;
+      if (n.indexOf(nt) >= 0 && nt.length > bestLen) { best = t; bestLen = nt.length; }
+      else if (nt.indexOf(n) >= 0 && n.length > bestLen) { best = t; bestLen = n.length; }
+    }
+    if (best >= 0) { mapped[i] = target[best]; used[best] = true; matchedCount++; }
+  });
+  return { headers: mapped, matched: matchedCount };
+}
+
 function handleFileImport(input) {
   const file = input.files[0];
   if (!file) return;
   const isExcel = /\.(xlsx|xls)$/i.test(file.name || '');
   const doImport = (headers, rows) => {
     if (!rows.length) { hideImportProgress(); showTooltip('⚠️ الملف لا يحتوي على صفوف بيانات', true); input.value = ''; return; }
+    const res = matchHeaders(headers);
     showImportProgress('تجهيز الصفوف (' + rows.length + ' سطر)', 55);
     setTimeout(function() {
       if (typeof importCSVData === 'function') {
-        importCSVData(headers, rows);
-        showImportProgress('تم استيراد ' + rows.length + ' سجل', 100);
-        setTimeout(hideImportProgress, 1600);
+        if (res.matched < 2) {
+          hideImportProgress();
+          showTooltip('❌ أعمدة الملف غير متطابقة: مطلوب أعمدة مثل: ' + (window.CSV_HEADERS || []).slice(0, 6).join('، ') + '...', true);
+        } else {
+          importCSVData(res.headers, rows);
+          showImportProgress('تم استيراد ' + rows.length + ' سجل', 100);
+          setTimeout(hideImportProgress, 1600);
+        }
       } else {
         hideImportProgress();
         showTooltip('⚠️ وظيفة الاستيراد غير متوفرة لهذه الاستمارة', true);
