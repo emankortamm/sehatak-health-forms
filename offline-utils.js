@@ -229,8 +229,17 @@ function buildToolbar(formName, backLink) {
       color: #a78bfa; cursor: pointer;
       font-family: 'Cairo', sans-serif; font-size: 0.82rem; font-weight: 700;
       transition: all 0.2s;
-    " onmouseover="this.style.background='rgba(139,92,246,0.2)'" onmouseout="this.style.background='rgba(139,92,246,0.1)'">📤 استيراد CSV</button>
-    <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
+    " onmouseover="this.style.background='rgba(139,92,246,0.2)'" onmouseout="this.style.background='rgba(139,92,246,0.1)'">📤 استيراد ملف (CSV / Excel)</button>
+    <input type="file" id="csvImportInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFileImport(this)">
+    <div id="importProgressWrap" style="display:none;flex:1 1 100%;margin-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px">
+        <span id="importProgressMsg" style="font-size:0.75rem;color:var(--text3);font-weight:600"></span>
+        <span id="importProgressPct" style="font-size:0.75rem;color:var(--primary);font-weight:800"></span>
+      </div>
+      <div style="height:10px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);overflow:hidden">
+        <div id="importProgressBar" style="height:100%;width:0%;border-radius:6px;background:linear-gradient(90deg,#0f766e,#10b981);transition:width 0.3s ease"></div>
+      </div>
+    </div>
   `;
   return div;
 }
@@ -288,20 +297,100 @@ function showTooltip(msg, isErr) {
   }
 }
 
-function handleCSVImport(input) {
+function showImportProgress(msg, pct) {
+  const wrap = document.getElementById('importProgressWrap');
+  const bar = document.getElementById('importProgressBar');
+  const pctEl = document.getElementById('importProgressPct');
+  const msgEl = document.getElementById('importProgressMsg');
+  if (wrap) wrap.style.display = 'block';
+  if (bar) bar.style.width = (pct || 0) + '%';
+  if (pctEl) pctEl.textContent = (pct || 0) + '%';
+  if (msgEl) msgEl.textContent = msg || '';
+}
+function hideImportProgress() {
+  const wrap = document.getElementById('importProgressWrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function loadXLSXLib() {
+  return new Promise((resolve, reject) => {
+    if (typeof XLSX !== 'undefined') { resolve(XLSX); return; }
+    const script = document.createElement('script');
+    script.src = 'xlsx.full.min.js';
+    script.onload = () => { if (typeof XLSX !== 'undefined') resolve(XLSX); else reject(new Error('فشل تحميل مكتبة Excel')); };
+    script.onerror = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s2.onload = () => { if (typeof XLSX !== 'undefined') resolve(XLSX); else reject(new Error('فشل تحميل مكتبة Excel')); };
+      s2.onerror = () => reject(new Error('مكتبة قراءة Excel غير متوفرة (تحقق من الاتصال بالإنترنت)'));
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        if (!ws) { reject(new Error('الملف لا يحتوي على أوراق عمل')); return; }
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+        if (!aoa.length) { reject(new Error('الملف لا يحتوي على بيانات')); return; }
+        const headers = (aoa[0] || []).map(h => String(h == null ? '' : h).trim());
+        const rows = [];
+        for (let i = 1; i < aoa.length; i++) {
+          const vals = aoa[i];
+          if (vals && vals.some(v => String(v).trim())) {
+            rows.push(vals.map(v => (v == null ? '' : String(v)).trim()));
+          }
+        }
+        resolve({ headers, rows });
+      } catch (err) {
+        reject(new Error('تعذر قراءة ملف Excel: ' + err.message));
+      }
+    };
+    reader.onerror = () => reject(new Error('فشل قراءة الملف'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function handleFileImport(input) {
   const file = input.files[0];
   if (!file) return;
-  readCSVFile(file).then(({ headers, rows }) => {
-    if (typeof importCSVData === 'function') {
-      importCSVData(headers, rows);
-    } else {
-      showTooltip('⚠️ وظيفة استيراد CSV غير متوفرة لهذه الاستمارة', true);
-    }
+  const isExcel = /\.(xlsx|xls)$/i.test(file.name || '');
+  const doImport = (headers, rows) => {
+    if (!rows.length) { hideImportProgress(); showTooltip('⚠️ الملف لا يحتوي على صفوف بيانات', true); input.value = ''; return; }
+    showImportProgress('تجهيز الصفوف (' + rows.length + ' سطر)', 55);
+    setTimeout(function() {
+      if (typeof importCSVData === 'function') {
+        importCSVData(headers, rows);
+        showImportProgress('تم استيراد ' + rows.length + ' سجل', 100);
+        setTimeout(hideImportProgress, 1600);
+      } else {
+        hideImportProgress();
+        showTooltip('⚠️ وظيفة الاستيراد غير متوفرة لهذه الاستمارة', true);
+      }
+      input.value = '';
+    }, 80);
+  };
+  const fail = err => {
+    hideImportProgress();
+    showTooltip('❌ فشل الاستيراد: ' + (err && err.message ? err.message : err), true);
     input.value = '';
-  }).catch(err => {
-    showTooltip('❌ فشل قراءة الملف: ' + err.message, true);
-    input.value = '';
-  });
+  };
+  if (isExcel) {
+    showImportProgress('تحميل مكتبة قراءة Excel...', 12);
+    loadXLSXLib().then(function() {
+      showImportProgress('قراءة ملف Excel...', 30);
+      readExcelFile(file).then(function(r) { doImport(r.headers, r.rows); }).catch(fail);
+    }).catch(fail);
+  } else {
+    showImportProgress('قراءة ملف CSV...', 20);
+    readCSVFile(file).then(function(r) { doImport(r.headers, r.rows); }).catch(fail);
+  }
 }
 
 function openSavedRecords() {

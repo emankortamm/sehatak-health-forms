@@ -6,6 +6,8 @@
 const SHEET_ID = '13nnScC6w3e0AxdreNmXCfDW2gz6c0I1-2zzBCnjwig8';
 const ROOT_FOLDER_ID = '1uot-zEvwR8tI_4COhGz0dM3SxPEkZu8E';
 const DATA_ROOT_FOLDER_ID = '1opDIaRsM4BJ8oqTVDP6PshcaI5xq3HUY';
+const BUILD = 'perf-v1';
+var DBG_IMG_MS = 0;
 const CENTERS = ['أشمون','الباجور','السادات','الشهداء','بركة السبع','تلا','شبين الكوم','قويسنا','منوف'];
 
 const TAB_FOLDER_MAP = [
@@ -23,8 +25,8 @@ const TAB_FOLDER_MAP = [
 const FORMS = {
   submit: {
     tab: 'المساعدات الطبية',
-    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','الهاتف','المركز','اسم الدواء','الكمية','صورة الروشتة','صورة البطاقة'],
-    fields: ['_id','_timestamp','patient_name','national_id','phone_number','center','med_name','med_qty','prescription_photo_url','id_photo_url'],
+    headers: ['معرف','تاريخ التسجيل','اسم الحالة','الرقم القومي','الهاتف','المركز','اسم الدواء','شريط/علبة','التركيز','النوع','تاريخ الانتهاء','الكمية','صورة الروشتة','صورة البطاقة'],
+    fields: ['_id','_timestamp','patient_name','national_id','phone_number','center','med_name','med_form','med_conc','med_type','med_exp','med_qty','prescription_photo_url','id_photo_url'],
     hasImages: true,
     imageFields: ['prescription_photo','id_photo'],
     subfolder: 'المساعدات الطبية'
@@ -176,6 +178,8 @@ function handleGetAllDrugSummary() {
 
 // ─── doPost ───
 function doPost(e) {
+  var T = { t0: Date.now(), parse: 0, handler: 0, dist: 0, rows: 0 };
+  DBG_IMG_MS = 0;
   try {
     let data;
     const ct = e?.postData?.type || '';
@@ -187,6 +191,7 @@ function doPost(e) {
     } else {
       data = JSON.parse(e.postData.contents);
     }
+    T.parse = Date.now() - T.t0;
 
     const action = data.action || '';
     const formConfig = FORMS[action];
@@ -206,6 +211,7 @@ function doPost(e) {
     let imagesFolder;
     if (formConfig.hasImages) imagesFolder = getOrCreateFormFolder(formConfig.subfolder);
 
+    var tH = Date.now();
     let result;
     if (action === 'submit') result = handleSubmit(data, sheet, formConfig, recordId, timestamp, imagesFolder);
     else if (action === 'referral') result = handleReferral(data, sheet, formConfig, recordId, timestamp, imagesFolder);
@@ -217,11 +223,22 @@ function doPost(e) {
     else if (action === 'masroufat') result = handleMasroufat(data, sheet, formConfig, recordId, timestamp, imagesFolder);
     else if (action === 'nawa2es_serf') result = handleNawa2esSerf(data, sheet, formConfig, recordId, timestamp);
     else return respondJson({ status: 'error', message: 'لم يتم معالجة الإجراء' });
+    T.handler = Date.now() - tH;
+    T.rows = (result.rows || []).length;
 
     // توزيع لحظي بعد الحفظ الناجح
-    try { distributeSingleRow(formConfig, data, recordId, timestamp); } catch (e) { console.error('Distribute error: ' + e); }
+    var tD = Date.now();
+    try { distributeSingleRow(formConfig, result.rows || []); } catch (e) { console.error('Distribute error: ' + e); }
+    T.dist = Date.now() - tD;
 
-    return result;
+    console.log('[PERF] ' + JSON.stringify({
+      build: BUILD, action: action, rows: T.rows,
+      total_ms: Date.now() - T.t0,
+      parse_ms: T.parse, handler_ms: T.handler, img_ms: DBG_IMG_MS,
+      distribute_ms: T.dist
+    }));
+
+    return result.json;
   } catch (e) {
     return respondJson({ status: 'error', message: e.toString() });
   }
@@ -233,14 +250,16 @@ function handleSubmit(data, sheet, config, recordId, timestamp, folder) {
   const idUrl = data.id_photo ? saveBase64Image(data.id_photo, 'بطاقة_' + recordId, folder) : '';
   var meds = [];
   try { meds = typeof data.medicines === 'string' ? JSON.parse(data.medicines) : (data.medicines || []); } catch(e) { meds = []; }
+  var rows = [];
   if (meds.length === 0) {
-    sheet.appendRow([recordId, timestamp, data.patient_name||'', data.national_id||'', data.phone_number||'', data.center||'', '', '', '', '', '', '', prescUrl, idUrl]);
+    rows.push([recordId, timestamp, data.patient_name||'', data.national_id||'', data.phone_number||'', data.center||'', '', '', '', '', '', '', prescUrl, idUrl]);
   } else {
     meds.forEach(function(m, i) {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.phone_number||'', data.center||'', m.med_name||m.name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), prescUrl, idUrl]);
+      rows.push([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.phone_number||'', data.center||'', m.med_name||m.name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), prescUrl, idUrl]);
     });
   }
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', id: recordId, count: meds.length });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', id: recordId, count: meds.length }), rows: rows };
 }
 
 // ─── التحويلات الطبية ───
@@ -267,8 +286,9 @@ function handleReferral(data, sheet, config, recordId, timestamp, folder) {
     target = data.speech_center || '';
     details = JSON.stringify({ address: data.speech_address||'' });
   }
-  sheet.appendRow([recordId, timestamp, data.patient_name||'', data.patient_age||'', data.patient_gender||'', data.patient_phone||'', data.national_id||'', data.patient_center||'', data.patient_address||'', data.referral_date||'', type, target, details, imgUrl, data.notes||'', data.staff_name||'']);
-  return respondJson({ status: 'success', message: 'تم تسجيل التحويل بنجاح', id: recordId });
+  var row = [recordId, timestamp, data.patient_name||'', data.patient_age||'', data.patient_gender||'', data.patient_phone||'', data.national_id||'', data.patient_center||'', data.patient_address||'', data.referral_date||'', type, target, details, imgUrl, data.notes||'', data.staff_name||''];
+  sheet.appendRow(row);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل التحويل بنجاح', id: recordId }), rows: [row] };
 }
 
 // ─── حصر الأدوية ───
@@ -277,18 +297,20 @@ function handleHserEdwia(data, sheet, config, recordId, timestamp) {
   try { tab = JSON.parse(data.tab || '[]'); } catch(e) { tab = []; }
   const date = data.date || '';
   const sec = data.sec || '';
+  var rows = [];
   if (tab.length === 0) {
-    sheet.appendRow([recordId, timestamp, date, sec, '', '', '', '', '', '', '', '']);
+    rows.push([recordId, timestamp, date, sec, '', '', '', '', '', '', '', '']);
   } else {
     tab.forEach((item, i) => {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, date, sec,
+      rows.push([recordId + '-' + (i + 1), timestamp, date, sec,
         item.name||'', item.focus||'', item.ava||'', item.typ||'',
         (item.do || item['do']||''), item.quan||'',
         (item.date_kw6pm91||''), item.takhassos||''
       ]);
     });
   }
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length }), rows: rows };
 }
 
 // ─── أدوية القوافل ───
@@ -297,25 +319,29 @@ function handleAdwytAlqawafel(data, sheet, config, recordId, timestamp) {
   try { tab = JSON.parse(data.tab || '[]'); } catch(e) { tab = []; }
   const date = data.date || '';
   const center = data.center || '';
+  var rows = [];
   if (tab.length === 0) {
-    sheet.appendRow([recordId, timestamp, date, center, '', '', '', '', '', '', '', '']);
+    rows.push([recordId, timestamp, date, center, '', '', '', '', '', '', '', '']);
   } else {
     tab.forEach((item, i) => {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, date, center,
+      rows.push([recordId + '-' + (i + 1), timestamp, date, center,
         item._||'', item.__001||'', item.__002||'', item.__003||'',
         item.__004||'', item.__005||'', item.__006||'', item.__007||''
       ]);
     });
   }
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length }), rows: rows };
 }
 
 // ─── صرف أدوية القوافل ───
 function handleSarfAlqawafel(data, sheet, config, recordId, timestamp, folder) {
   const prescriptions = data.prescription_group || [];
+  var rows = [];
   if (prescriptions.length === 0) {
-    sheet.appendRow([recordId, timestamp, data.center||'', data.caravan_date||'', '', '', '', '', '', '', '', '', '']);
-    return respondJson({ status: 'success', message: 'تم التسجيل (بدون أدوية)' });
+    rows.push([recordId, timestamp, data.center||'', data.caravan_date||'', '', '', '', '', '', '', '', '', '']);
+    appendRows(sheet, rows);
+    return { json: respondJson({ status: 'success', message: 'تم التسجيل (بدون أدوية)' }), rows: rows };
   }
   var rowIdx = 0;
   prescriptions.forEach(function(p) {
@@ -323,61 +349,75 @@ function handleSarfAlqawafel(data, sheet, config, recordId, timestamp, folder) {
     var meds = p.medicine_group || [];
     if (meds.length === 0) {
       rowIdx++;
-      sheet.appendRow([recordId + '-' + rowIdx, timestamp, data.center||'', data.caravan_date||'', p.doctor_name||'', p.doctor_specialty||'', '', '', '', '', '', '', imgUrl]);
+      rows.push([recordId + '-' + rowIdx, timestamp, data.center||'', data.caravan_date||'', p.doctor_name||'', p.doctor_specialty||'', '', '', '', '', '', '', imgUrl]);
     } else {
       meds.forEach(function(m) {
         rowIdx++;
-        sheet.appendRow([recordId + '-' + rowIdx, timestamp, data.center||'', data.caravan_date||'', p.doctor_name||'', p.doctor_specialty||'', m.medicine_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.quantity||m.qty||''), imgUrl]);
+        rows.push([recordId + '-' + rowIdx, timestamp, data.center||'', data.caravan_date||'', p.doctor_name||'', p.doctor_specialty||'', m.medicine_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.quantity||m.qty||''), imgUrl]);
       });
     }
   });
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + rowIdx + ' دواء', count: rowIdx });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + rowIdx + ' دواء', count: rowIdx }), rows: rows };
 }
 
 // ─── نتائج القوافل ───
 function handleNata2Alqawafel(data, sheet, config, recordId, timestamp) {
-  sheet.appendRow([recordId, timestamp, data.center||'', data.total_checkups||'', data.total_labs||'', data.other_interventions||'', data.other_interventions_count||'', JSON.stringify(data.specialties||[])]);
-  return respondJson({ status: 'success', message: 'تم تسجيل نتائج القافلة بنجاح' });
+  var row = [recordId, timestamp, data.center||'', data.total_checkups||'', data.total_labs||'', data.other_interventions||'', data.other_interventions_count||'', JSON.stringify(data.specialties||[])];
+  sheet.appendRow(row);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل نتائج القافلة بنجاح' }), rows: [row] };
 }
 
 // ─── التعاقدات الطبية ───
 function handleTaaqodat(data, sheet, config, recordId, timestamp, folder) {
   const imgUrl = data.contract_photo ? saveBase64Image(data.contract_photo, 'تعاقد_' + recordId, folder) : '';
-  sheet.appendRow([recordId, timestamp, data.entity_type||'', data.facility_name||'', data.contract_text||'', imgUrl, data.contractor_name||'', data.volunteer_number||'', data.name_contractor||'', data.job_title||'', data.facility_phone||'', data.detailed_address||'', data.location||'', data.center||'', data.notes||'']);
-  return respondJson({ status: 'success', message: 'تم تسجيل التعاقد بنجاح' });
+  var row = [recordId, timestamp, data.entity_type||'', data.facility_name||'', data.contract_text||'', imgUrl, data.contractor_name||'', data.volunteer_number||'', data.name_contractor||'', data.job_title||'', data.facility_phone||'', data.detailed_address||'', data.location||'', data.center||'', data.notes||''];
+  sheet.appendRow(row);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل التعاقد بنجاح' }), rows: [row] };
 }
 
 // ─── مصروفات الحالات ───
 function handleMasroufat(data, sheet, config, recordId, timestamp, folder) {
   const imgUrl = data.prescription_photo ? saveBase64Image(data.prescription_photo, 'مصروفات_' + recordId, folder) : '';
   const meds = data.medications_group || [];
+  var rows = [];
   if (meds.length === 0) {
-    sheet.appendRow([recordId, timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', '', '', '', '', '', '', '', '', imgUrl]);
+    rows.push([recordId, timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', '', '', '', '', '', '', '', '', imgUrl]);
   } else {
     meds.forEach(function(m, i) {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', m.donor_center||'', imgUrl]);
+      rows.push([recordId + '-' + (i + 1), timestamp, data.patient_name||'', data.national_id||'', data.integer_wa4xt75||'', data.center||'', m.med_name||'', m.med_form||'', m.med_conc||'', m.med_type||'', m.med_exp||'', (m.med_qty||m.qty||''), m.med_source||'', m.donor_center||'', imgUrl]);
     });
   }
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', count: meds.length });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + meds.length + ' دواء', count: meds.length }), rows: rows };
 }
 
 // ─── نواقص الصرف الشهري ───
 function handleNawa2esSerf(data, sheet, config, recordId, timestamp) {
   let tab;
   try { tab = JSON.parse(data.tab || '[]'); } catch(e) { tab = []; }
+  var rows = [];
   if (tab.length === 0) {
-    sheet.appendRow([recordId, timestamp, '', '', '', '', '', '', '']);
+    rows.push([recordId, timestamp, '', '', '', '', '', '', '']);
   } else {
     tab.forEach((item, i) => {
-      sheet.appendRow([recordId + '-' + (i + 1), timestamp, item.name||'', item.form||'', item.conc||'', item.qty||'', item.price||'', item.sample||'', item.center||'']);
+      rows.push([recordId + '-' + (i + 1), timestamp, item.name||'', item.form||'', item.conc||'', item.qty||'', item.price||'', item.sample||'', item.center||'']);
     });
   }
-  return respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length });
+  appendRows(sheet, rows);
+  return { json: respondJson({ status: 'success', message: 'تم تسجيل ' + tab.length + ' دواء', count: tab.length }), rows: rows };
+}
+
+// ─── كتابة مجمعة سريعة ───
+function appendRows(sheet, rows) {
+  if (!rows || !rows.length) return;
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 // ─── الصور ───
 function saveBase64Image(base64Str, fileName, parentFolder) {
   if (!base64Str) return '';
+  var t0 = Date.now();
   try {
     let data = base64Str;
     let mimeType = 'image/jpeg';
@@ -393,8 +433,10 @@ function saveBase64Image(base64Str, fileName, parentFolder) {
     const bytes = Utilities.base64Decode(data);
     const blob = Utilities.newBlob(bytes, mimeType, fileName + ext);
     const file = parentFolder.createFile(blob);
+    DBG_IMG_MS += Date.now() - t0;
     return file.getUrl();
   } catch (e) {
+    DBG_IMG_MS += Date.now() - t0;
     console.error('فشل حفظ الصورة ' + fileName + ': ' + e.toString());
     return '';
   }
@@ -463,32 +505,30 @@ function distributeAllData() {
   });
 }
 
-function distributeSingleRow(formConfig, data, recordId, timestamp) {
+function distributeSingleRow(formConfig, rows) {
+  if (!rows || !rows.length) return;
   var cfg = null;
   for (var idx = 0; idx < TAB_FOLDER_MAP.length; idx++) {
     if (TAB_FOLDER_MAP[idx].tab === formConfig.tab) { cfg = TAB_FOLDER_MAP[idx]; break; }
   }
   if (!cfg) return;
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName(formConfig.tab);
-  if (!sheet) return;
-  var allData = sheet.getDataRange().getValues();
-  if (allData.length < 2) return;
-  var headers = allData[0];
   var ci = cfg.centerCol - 1;
+  var headers = formConfig.headers;
   var root = DriveApp.getFolderById(DATA_ROOT_FOLDER_ID);
   var formFolder = cfg.folderId ? DriveApp.getFolderById(cfg.folderId) : getFolderByName(root, cfg.folderName);
   if (!formFolder) return;
-  for (var i = allData.length - 1; i >= 1; i--) {
-    var row = allData[i];
-    var id = row[0] ? row[0].toString() : '';
-    if (id.indexOf(recordId) !== 0 && i > allData.length - 50) continue;
-    if (id.indexOf(recordId) !== 0) break;
+  var byCenter = {};
+  rows.forEach(function(row) {
     var center = (row[ci] || '').toString().trim();
-    if (!center) continue;
+    if (!center) return;
+    if (!byCenter[center]) byCenter[center] = [];
+    byCenter[center].push(row);
+  });
+  Object.keys(byCenter).forEach(function(center) {
+    var centerRows = byCenter[center];
     var subName = cfg.folderName + '_' + center;
     var centerFolder = getFolderByName(formFolder, subName);
-    if (!centerFolder) continue;
+    if (!centerFolder) return;
     var sh = getSheetInFolder(centerFolder, center);
     if (!sh) {
       sh = SpreadsheetApp.create(formConfig.tab + ' - ' + center);
@@ -496,10 +536,12 @@ function distributeSingleRow(formConfig, data, recordId, timestamp) {
       centerFolder.addFile(file);
       DriveApp.getRootFolder().removeFile(file);
       sh.getActiveSheet().appendRow(headers);
-      sh.getActiveSheet().getRange(1,1,1,headers.length).setFontWeight('bold').setBackground('#0f766e').setFontColor('#ffffff');
+      sh.getActiveSheet().getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#0f766e').setFontColor('#ffffff');
     }
-    sh.getActiveSheet().appendRow(row);
-  }
+    var sh2 = sh.getActiveSheet();
+    if (centerRows.length === 1) sh2.appendRow(centerRows[0]);
+    else sh2.getRange(sh2.getLastRow() + 1, 1, centerRows.length, centerRows[0].length).setValues(centerRows);
+  });
 }
 
 function getFolderByName(parentFolder, name) {
