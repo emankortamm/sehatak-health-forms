@@ -590,6 +590,17 @@ document.querySelectorAll('input,select,textarea').forEach(el => el.addEventList
 let specCount = 0;
 
 function addSpecialty() {
+  const last = $('specialtiesList').lastElementChild;
+  if (last) {
+    const fields = [last.querySelector('[name="specialty"]'), last.querySelector('[name="doctor_name"]'), last.querySelector('[name="spec_checkups"]'), last.querySelector('[name="time_spent"]')];
+    let ok = true;
+    fields.forEach(f => { if (!f || !f.value || !f.value.trim()) ok = false; });
+    if (!ok) {
+      showStatus('⚠️ أكمل بيانات التخصص الحالي أولًا (التخصص، الدكتور، عدد الكشوفات، الوقت)', true);
+      focusFirstEmpty(fields);
+      return;
+    }
+  }
   specCount++;
   const div = document.createElement('div');
   div.className = 'specialty-item';

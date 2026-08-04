@@ -840,6 +840,20 @@ function compressImage(file, quality) {
 let medCount = 0;
 
 function addMedicine() {
+  const items = document.querySelectorAll('.medicine-item');
+  const last = items[items.length - 1];
+  if (last) {
+    const idx = last.id.replace('mid_', '');
+    const ids = ['med_cs_name_' + idx, 'med_cs_form_' + idx, 'med_cs_conc_' + idx, 'med_cs_type_' + idx, 'med_cs_exp_' + idx, 'cs_qty_' + idx];
+    const empties = [];
+    ids.forEach(id => { const el = $(id); if (!el || !el.value || !el.value.trim()) empties.push(el); });
+    if (empties.length) {
+      showStatus('⚠️ أكمل اختيار بيانات الدواء الحالي أولًا (الاسم، شريط/علبة، التركيز، النوع، تاريخ الانتهاء، الكمية)', true);
+      const visible = ['cs_name_' + idx, 'cs_form_' + idx, 'cs_conc_' + idx, 'cs_type_' + idx, 'cs_exp_' + idx, 'cs_qty_' + idx].map(id => $(id));
+      focusFirstEmpty(visible);
+      return;
+    }
+  }
   medCount++;
   const idx = medCount;
   const div = document.createElement('div');

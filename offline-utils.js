@@ -285,6 +285,21 @@ function saveCurrentForm() {
   }
 }
 
+function focusFirstEmpty(els) {
+  const list = els || [];
+  for (let i = 0; i < list.length; i++) {
+    const el = list[i];
+    if (!el) continue;
+    const v = (el.value === null || el.value === undefined) ? '' : String(el.value);
+    if (!v.trim()) {
+      try { el.focus({ preventScroll: true }); } catch (err) { try { el.focus(); } catch (err2) {} }
+      if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
+    }
+  }
+  return false;
+}
+
 function focusFirstError() {
   const errs = document.querySelectorAll('.field-error');
   let first = null;

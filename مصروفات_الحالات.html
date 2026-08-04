@@ -807,6 +807,40 @@ function handlePrescriptionFile(inp) {
 let medCount = 0;
 
 function addMedication() {
+  if (medCount >= 1) {
+    const item = $('med_' + medCount);
+    const sourceEl = item.querySelector('[name^="med_source_"]');
+    const med_source = sourceEl ? sourceEl.value : '';
+    let ok = true;
+    const cands = [sourceEl];
+    if (!med_source) { ok = false; }
+    else if (med_source === 'تبرعات عينية من المقر' || med_source === 'تبرعات عينية من مركز آخر') {
+      const donorEl = item.querySelector('[name^="med_donor_center_"]');
+      const donor = donorEl ? donorEl.value.trim() : '';
+      if (med_source === 'تبرعات عينية من مركز آخر') { cands.push(donorEl); if (!donor) ok = false; }
+      const h1 = item.querySelector('[name^="med_cs_name_"]')?.value?.trim();
+      const h2 = item.querySelector('[name^="med_cs_form_"]')?.value?.trim();
+      const h3 = item.querySelector('[name^="med_cs_conc_"]')?.value?.trim();
+      const h4 = item.querySelector('[name^="med_cs_type_"]')?.value?.trim();
+      const h5 = item.querySelector('[name^="med_cs_exp_"]')?.value?.trim();
+      const qtyEl = item.querySelector('[name^="cs_qty_"]');
+      const qty = qtyEl ? qtyEl.value.trim() : '';
+      if (!h1 || !h2 || !h3 || !h4 || !h5 || !qty) ok = false;
+      var mQty = parseInt(qty);
+      var maxStock = parseInt($('cs_stock_' + medCount)?._maxQty) || 0;
+      if (qty && mQty > maxStock) { showErr('e_cs_qty_' + medCount, 'الكمية (' + mQty + ') تتجاوز المخزون (' + maxStock + ')'); ok = false; }
+      ['cs_name_', 'cs_form_', 'cs_conc_', 'cs_type_', 'cs_exp_'].forEach(p => cands.push(item.querySelector('[name^="' + p + '"]')));
+      cands.push(qtyEl);
+    } else {
+      const n1El = item.querySelector('[name^="med_name_"]');
+      const n2El = item.querySelector('[name^="med_qty_"]');
+      const n1 = n1El ? n1El.value.trim() : '';
+      const n2 = n2El ? n2El.value.trim() : '';
+      if (!n1 || !n2) ok = false;
+      cands.push(n1El, n2El);
+    }
+    if (!ok) { showStatus('⚠️ أكمل بيانات الدواء الحالي أولًا (المصدر وبيانات الدواء كاملة)', true); focusFirstEmpty(cands); return; }
+  }
   medCount++;
   const div = document.createElement('div');
   div.className = 'medicine-item';

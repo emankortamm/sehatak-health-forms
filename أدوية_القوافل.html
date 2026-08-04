@@ -600,6 +600,15 @@ function toggleSection(type) {
 let tabCount = 0;
 
 function addTabItem() {
+  if (tabCount >= 1) {
+    let ok = true;
+    if (!$('name_' + tabCount).value.trim()) { showErr('e_name_' + tabCount); ok = false; }
+    if (!$('exp_' + tabCount).value) { showErr('e_exp_' + tabCount); ok = false; }
+    if (!$('type_' + tabCount).value) { showErr('e_type_' + tabCount); ok = false; }
+    if (!$('unit_' + tabCount).value) { showErr('e_unit_' + tabCount); ok = false; }
+    if (!$('qty_' + tabCount).value.trim()) { showErr('e_qty_' + tabCount); ok = false; }
+    if (!ok) { showStatus('⚠️ أكمل بيانات الدواء الحالي أولًا قبل إضافة دواء جديد', true); focusFirstError(); return; }
+  }
   tabCount++;
   const div = document.createElement('div');
   div.className = 'repeat-item';

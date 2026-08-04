@@ -658,6 +658,20 @@ function updateMedBadge() {
 }
 
 function addMedicine() {
+  const items = document.querySelectorAll('.medicine-item');
+  const last = items[items.length - 1];
+  if (last) {
+    const errs = last.querySelectorAll('.field-error');
+    const names = ['med_name', 'med_ava', 'med_typ', 'med_do', 'med_quan', 'med_date_kw6pm91'];
+    let ok = true;
+    names.forEach((n, i) => {
+      const el = last.querySelector('[name="' + n + '"]');
+      if (!el || !el.value.trim()) { if (errs[i]) { errs[i].textContent = 'هذا الحقل مطلوب'; errs[i].style.display = 'block'; } ok = false; }
+    });
+    const nameEl = last.querySelector('[name="med_name"]');
+    if (nameEl && nameEl.value.trim() && !/^[a-zA-Z ]+$/.test(nameEl.value)) { if (errs[0]) { errs[0].textContent = 'اسم الدواء يجب أن يكون حروف إنجليزية فقط'; errs[0].style.display = 'block'; } ok = false; }
+    if (!ok) { showStatus('⚠️ أكمل بيانات الدواء الحالي أولًا قبل إضافة دواء جديد', true); focusFirstError(); return; }
+  }
   medCount++;
   const div = document.createElement('div');
   div.className = 'medicine-item';

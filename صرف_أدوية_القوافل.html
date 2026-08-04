@@ -736,6 +736,29 @@ let prescCount = 0;
 let medCounter = 0;
 
 function addPrescription() {
+  if (prescCount >= 1) {
+    const n = prescCount;
+    const block = $('presc_' + n);
+    let ok = true;
+    const fileInput = block ? block.querySelector('.upload-area input[type="file"]') : null;
+    if (!(fileInput && (fileInput._compressed || (fileInput.files && fileInput.files[0])))) { showErr('pe_' + n); ok = false; }
+    const dn = block ? block.querySelector('.doc-name-input') : null;
+    if (!dn || !dn.value.trim()) { showErr('edn_' + n); ok = false; }
+    const ds = block ? block.querySelector('.doc-spec-select') : null;
+    if (!ds || !ds.value) { showErr('eds_' + n); ok = false; }
+    if (block) {
+      block.querySelectorAll('.med-item').forEach(function(m) {
+        const idx = m.id.split('_').pop();
+        ['med_cs_name_', 'med_cs_form_', 'med_cs_conc_', 'med_cs_type_', 'med_cs_exp_'].forEach(p => {
+          const el = $('' + p + idx);
+          if (!el || !el.value || !el.value.trim()) ok = false;
+        });
+        const qtyEl = $('cs_qty_' + idx);
+        if (!qtyEl || !qtyEl.value.trim()) ok = false;
+      });
+    }
+    if (!ok) { showStatus('⚠️ أكمل الروشتة الحالية أولًا (الصورة، الدكتور، التخصص، وكل الأدوية)', true); focusFirstError(); return; }
+  }
   prescCount++;
   const pid = 'presc_' + prescCount;
   const div = document.createElement('div');
@@ -808,15 +831,33 @@ function renumberPrescriptions() {
 }
 
 function addMedicine(prescId) {
+  const container = document.querySelector('.med-list-' + prescId);
+  if (!container) return;
+  const meds = container.querySelectorAll('.med-item');
+  const last = meds[meds.length - 1];
+  if (last) {
+    const idx = last.id.split('_').pop();
+    let ok = true;
+    ['med_cs_name_', 'med_cs_form_', 'med_cs_conc_', 'med_cs_type_', 'med_cs_exp_'].forEach(p => {
+      const el = $('' + p + idx);
+      if (!el || !el.value || !el.value.trim()) ok = false;
+    });
+    const qtyEl = $('cs_qty_' + idx);
+    if (!qtyEl || !qtyEl.value.trim()) ok = false;
+    if (!ok) {
+      showStatus('⚠️ أكمل بيانات الدواء الحالي أولًا قبل إضافة دواء آخر', true);
+      const visible = ['cs_name_', 'cs_form_', 'cs_conc_', 'cs_type_', 'cs_exp_'].map(p => $('' + p + idx));
+      visible.push(qtyEl);
+      focusFirstEmpty(visible);
+      return;
+    }
+  }
   medCounter++;
   const idx = medCounter;
   const mid = 'med_' + prescId + '_' + idx;
-  const container = document.querySelector('.med-list-' + prescId);
-  if (!container) return;
   const div = document.createElement('div');
   div.className = 'med-item';
   div.id = mid;
-  const meds = container.querySelectorAll('.med-item');
   const medNum = meds.length + 1;
   let removeMedBtn = '';
   if (meds.length > 0 || container.querySelector('.med-item')) {
