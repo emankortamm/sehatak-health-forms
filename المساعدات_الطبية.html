@@ -698,6 +698,7 @@ body { padding-top: 32px; }
   </div>
 </div>
 
+<script src="offline-utils.js"></script>
 <script>
 // ═══ CONFIG — ضع رابط Web App هنا ═══
 const API_URL = "https://script.google.com/macros/s/AKfycbzTkmFGEYZHEhQssU38zv65WZcQ4MqWMeIWI2vUmG8JpBIQjpwCnBUg846RSNMtTEFW/exec";
@@ -1134,7 +1135,7 @@ $('mainForm').addEventListener('submit', async function(e) {
     medicines.push({ med_name: medName, med_form: medForm, med_conc: medConc, med_type: medType, med_exp: medExp, med_qty: mQty });
   });
   if (!medicines.length) { valid = false; alert('⚠️ يرجى إدخال دواء واحد على الأقل'); }
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   if (nidBusy) { alert('⏳ جارٍ التحقق من الرقم القومي، انتظر لحظة...'); return; }
   if (nidOk === false) { $('rejectedNid').textContent = national_id; showOverlay('rejectOverlay'); return; }

@@ -686,7 +686,7 @@ $('mainForm').addEventListener('submit', async function(e) {
     valid = false;
     if (!valid) alert('⚠️ يرجى إدخال بيانات التخصصات كاملة');
   }
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');

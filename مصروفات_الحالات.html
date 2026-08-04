@@ -1238,7 +1238,7 @@ $('mainForm').addEventListener('submit', async function(e) {
   });
 
   if (medErrors) { alert('⚠️ توجد أخطاء في بيانات الأدوية. تأكد من إكمال جميع الحقول ومن أن الكمية لا تتجاوز المخزون.'); valid = false; }
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');

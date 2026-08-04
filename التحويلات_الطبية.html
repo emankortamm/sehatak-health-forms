@@ -776,6 +776,7 @@ body { padding-top: 32px; }
   </div>
 </div>
 
+<script src="offline-utils.js"></script>
 <script>
 // ═══ CONFIG ═══
 const API_URL = "https://script.google.com/macros/s/AKfycbzTkmFGEYZHEhQssU38zv65WZcQ4MqWMeIWI2vUmG8JpBIQjpwCnBUg846RSNMtTEFW/exec";
@@ -975,7 +976,7 @@ $('mainForm').addEventListener('submit', async function(e) {
     if (!pc) { showErr('e17'); valid = false; }
   }
 
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');

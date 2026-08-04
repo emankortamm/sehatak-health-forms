@@ -772,7 +772,7 @@ $('mainForm').addEventListener('submit', async function(e) {
   if (!job_title) { showErr('e_job_title'); valid = false; }
   if (!detailed_address) { showErr('e_detailed_address'); valid = false; }
 
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');

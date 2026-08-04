@@ -773,7 +773,7 @@ $('mainForm').addEventListener('submit', async function(e) {
     });
   });
 
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');

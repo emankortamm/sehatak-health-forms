@@ -285,6 +285,29 @@ function saveCurrentForm() {
   }
 }
 
+function focusFirstError() {
+  const errs = document.querySelectorAll('.field-error');
+  let first = null;
+  for (let i = 0; i < errs.length; i++) {
+    if (errs[i].style.display !== 'none') { first = errs[i]; break; }
+  }
+  if (!first) return false;
+  let input = null;
+  if (first.id && first.id.indexOf('e_') === 0) {
+    input = document.getElementById(first.id.slice(2));
+  }
+  if (!input || typeof input.focus !== 'function') {
+    const field = first.closest ? first.closest('.field') : null;
+    if (field) input = field.querySelector('input,select,textarea');
+  }
+  const target = (input && typeof input.focus === 'function') ? input : first;
+  try { target.focus({ preventScroll: true }); } catch (err) { try { target.focus(); } catch (err2) {} }
+  if (typeof target.scrollIntoView === 'function') {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  return true;
+}
+
 function showTooltip(msg, isErr) {
   const el = document.getElementById('statusMsg') || document.querySelector('.status-msg');
   if (el) {

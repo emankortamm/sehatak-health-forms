@@ -832,7 +832,7 @@ $('mainForm').addEventListener('submit', async function(e) {
     tab.push({ name, focus, ava, typ, do: dUnit, quan, date_kw6pm91: exp, takhassos });
   });
 
-  if (!valid) return;
+  if (!valid) { focusFirstError(); return; }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');
