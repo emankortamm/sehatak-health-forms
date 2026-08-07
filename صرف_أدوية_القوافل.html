@@ -255,12 +255,51 @@ body {
 .field input::placeholder, .field textarea::placeholder { color: var(--text3); }
 .field input.error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important; background: rgba(239,68,68,0.05) !important; }
 .field input.valid { border-color: var(--accent) !important; background: rgba(16,185,129,0.05) !important; }
+.field input.red, .field select.red, .field textarea.red {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15) !important;
+  background: rgba(239,68,68,0.06) !important;
+}
+.upload-area.red {
+  border-color: var(--danger) !important;
+  background: rgba(239,68,68,0.06) !important;
+}
 .field select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left 12px center;
   padding-left: 36px;
 }
+.autocomplete { position: relative; width: 100%; }
+.autocomplete-list {
+  position: fixed;
+  z-index: 900;
+  background: var(--bg3);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  max-height: 260px;
+  overflow-y: auto;
+  display: none;
+}
+.autocomplete-item {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  text-align: right;
+}
+.autocomplete-item:hover, .autocomplete-item.active { background: var(--primary-dim); color: var(--accent); }
+.autocomplete-item + .autocomplete-item { border-top: 1px solid var(--border); }
+.autocomplete-empty {
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  color: var(--text3);
+  text-align: center;
+}
+.autocomplete-list::-webkit-scrollbar { width: 6px; }
+.autocomplete-list::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
 .field-hint { font-size: 0.72rem; color: var(--text3); margin-top: 1px; }
 .field-error { font-size: 0.72rem; color: var(--danger); margin-top: 2px; display: none; }
 .upload-area {
@@ -400,6 +439,49 @@ body {
 .btn-overlay.primary:hover { background: var(--primary-hover); }
 .btn-overlay.danger { background: var(--danger); color: #fff; }
 .btn-overlay.danger:hover { background: #dc2626; }
+.save-card { max-width: 420px; padding: 28px 24px; }
+.save-icon { font-size: 2.4rem; margin-bottom: 10px; transition: color var(--transition); }
+.save-icon.success { color: var(--accent); }
+.save-icon.error { color: var(--danger); }
+.save-card h2 { font-family: 'Cairo', sans-serif; font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 8px; }
+.save-status { font-size: 0.82rem; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
+.save-progress {
+  height: 9px;
+  background: var(--bg4);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.save-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: var(--radius-full);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.save-progress-bar.active::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: saveShimmer 1.4s linear infinite;
+}
+.save-progress-bar.error { background: var(--danger); }
+.save-progress-bar.error::after { display: none; }
+@keyframes saveShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.save-counter {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text);
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+.save-counter .num { color: var(--accent); }
+.save-counter .num.error { color: var(--danger); }
+.overlay-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+.draft-hint { font-size: 0.78rem; color: var(--text3); margin-top: 14px; line-height: 1.7; }
 .footer {
   text-align: center;
   padding: 24px 16px 16px;
@@ -615,6 +697,32 @@ body { padding-top: 32px; }
   </div>
 </div>
 
+<div class="overlay" id="saveOverlay">
+  <div class="overlay-card save-card">
+    <div class="save-icon" id="saveIcon">💾</div>
+    <h2 id="saveTitle">جاري حفظ البيانات...</h2>
+    <p class="save-status" id="saveStatus">جارٍ تجهيز البيانات ورفع الصور...</p>
+    <div class="save-progress">
+      <div class="save-progress-bar" id="saveProgressBar"></div>
+    </div>
+    <div class="save-counter"><span class="num" id="saveCounterX">0</span> / <span id="saveCounterY">0</span></div>
+    <button type="button" class="btn-overlay primary" id="saveRetryBtn" style="display:none" onclick="retrySave()">🔄 إعادة المحاولة</button>
+  </div>
+</div>
+
+<div class="overlay" id="draftOverlay">
+  <div class="overlay-card">
+    <div class="ov-icon">📝</div>
+    <h2>استعادة البيانات غير المكتملة</h2>
+    <p id="draftMsg">تم العثور على بيانات غير مكتملة من محاولة سابقة، هل تريد استعادتها؟</p>
+    <div class="overlay-actions">
+      <button type="button" class="btn-overlay primary" onclick="restoreDraft()">↩️ استعادة البيانات</button>
+      <button type="button" class="btn-overlay danger" onclick="discardDraft()">🗑 بدء استمارة جديدة</button>
+    </div>
+    <div class="draft-hint">سيتم حفظ أي بيانات تكتبها تلقائيًا في هذا الجهاز أثناء الكتابة، ولن تُفقد حتى يتم الحفظ بنجاح على الخادم.</div>
+  </div>
+</div>
+
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzTkmFGEYZHEhQssU38zv65WZcQ4MqWMeIWI2vUmG8JpBIQjpwCnBUg846RSNMtTEFW/exec";
 
@@ -624,6 +732,25 @@ const hide = id => $(id).style.display = 'none';
 const showErr = (id, msg) => { const e = $(id); e.textContent = msg || e.textContent; e.style.display = 'block'; };
 const hideErr = id => { const e = $(id); if(e) e.style.display = 'none'; };
 const hideAllErrs = () => document.querySelectorAll('.field-error').forEach(e => e.style.display = 'none');
+
+function clearFieldError(el) {
+  if (!el || !el.classList) return;
+  el.classList.remove('red');
+  const area = el.closest ? el.closest('.upload-area') : null;
+  if (area) area.classList.remove('red');
+  const field = el.closest ? el.closest('.field') : null;
+  if (!field) return;
+  if (el.id && el.id.indexOf('cs_qty_') === 0) {
+    const idx = el.id.replace('cs_qty_', '');
+    checkQtyStock(idx);
+    const maxStock = parseInt($('cs_stock_' + idx)?._maxQty) || 0;
+    if (parseInt(el.value) > maxStock) el.classList.add('red');
+    return;
+  }
+  field.querySelectorAll('.field-error').forEach(s => s.style.display = 'none');
+}
+$('mainForm').addEventListener('input', ev => clearFieldError(ev.target));
+$('mainForm').addEventListener('change', ev => clearFieldError(ev.target));
 
 const specialties = [
   ['باطنة عامة', 'باطنة عامة'],
@@ -684,13 +811,11 @@ function handlePrescFile(inp, prescId) {
   const errEl = $('pe_' + prescId);
   if (file.type === 'application/pdf') {
     showPrescFileInfo(file, nameEl, prevEl, errEl);
-  } else if (file.size > 1024 * 1024) {
-    compressImage(file, 0.7).then(compressed => {
-      inp._compressed = compressed;
-      showPrescFileInfo(compressed, nameEl, prevEl, errEl);
-    }).catch(() => showPrescFileInfo(file, nameEl, prevEl, errEl));
   } else {
-    showPrescFileInfo(file, nameEl, prevEl, errEl);
+    compressImage(file, 0.7).then(compressed => {
+      inp._compressed = (compressed.size < file.size) ? compressed : file;
+      showPrescFileInfo(inp._compressed, nameEl, prevEl, errEl);
+    }).catch(() => showPrescFileInfo(file, nameEl, prevEl, errEl));
   }
 }
 
@@ -735,8 +860,8 @@ function compressImage(file, quality) {
 let prescCount = 0;
 let medCounter = 0;
 
-function addPrescription() {
-  if (prescCount >= 1) {
+function addPrescription(skipValidate) {
+  if (!skipValidate && prescCount >= 1) {
     const n = prescCount;
     const block = $('presc_' + n);
     let ok = true;
@@ -830,12 +955,12 @@ function renumberPrescriptions() {
   prescCount = blocks.length;
 }
 
-function addMedicine(prescId) {
+function addMedicine(prescId, skipValidate) {
   const container = document.querySelector('.med-list-' + prescId);
   if (!container) return;
   const meds = container.querySelectorAll('.med-item');
   const last = meds[meds.length - 1];
-  if (last) {
+  if (!skipValidate && last) {
     const idx = last.id.split('_').pop();
     let ok = true;
     ['med_cs_name_', 'med_cs_form_', 'med_cs_conc_', 'med_cs_type_', 'med_cs_exp_'].forEach(p => {
@@ -873,9 +998,14 @@ function addMedicine(prescId) {
     <div class="field-row single" id="cs_row_name_${idx}">
       <div class="field">
         <label>اسم الدواء <span class="req">*</span></label>
-        <select id="cs_name_${idx}" onchange="onCSC('${idx}','name')">
-          <option value="">⏳ جارٍ التحميل...</option>
-        </select>
+        <div class="autocomplete">
+          <input type="text" id="cs_name_${idx}" placeholder="ابدأ بكتابة اسم الدواء للبحث..." autocomplete="off"
+                 oninput="scheduleDrugList(${idx})"
+                 onfocus="renderDrugList(${idx})"
+                 onkeydown="onDrugKeydown(${idx}, event)"
+                 onblur="hideDrugList(${idx})">
+          <div class="autocomplete-list" id="cs_list_${idx}"></div>
+        </div>
       </div>
     </div>
     <div class="field-row" id="cs_row_form_${idx}" style="display:none">
@@ -955,40 +1085,303 @@ function showStatus(msg, isErr) {
 }
 function hideStatus() { $('statusMsg').style.display = 'none'; }
 
+// ─── Save progress modal ───
+var retryBatches = null;
+var retryMedCount = 0;
+var retryBaseCount = 0;
+
+function openSaveModal(totalMedCount) {
+  const icon = $('saveIcon');
+  icon.textContent = '💾';
+  icon.classList.remove('success', 'error');
+  $('saveTitle').textContent = 'جاري حفظ البيانات...';
+  $('saveStatus').textContent = 'جارٍ تجهيز البيانات ورفع الصور...';
+  const bar = $('saveProgressBar');
+  bar.classList.remove('error', 'active');
+  bar.style.width = '0%';
+  $('saveCounterY').textContent = totalMedCount;
+  $('saveCounterX').textContent = '0';
+  $('saveRetryBtn').style.display = 'none';
+  showOverlay('saveOverlay');
+}
+
+function setSavePrepProgress(done, total) {
+  const bar = $('saveProgressBar');
+  bar.classList.remove('active');
+  bar.style.width = Math.round((done / total) * 50) + '%';
+  $('saveStatus').textContent = 'جارٍ رفع صورة الروشتة (' + done + ' من ' + total + ')...';
+}
+
+function setSaveSending() {
+  const bar = $('saveProgressBar');
+  bar.classList.add('active');
+  bar.style.width = '72%';
+  $('saveStatus').textContent = 'جارٍ إرسال البيانات وحفظها على الخادم...';
+}
+
+function setSaveSendProgress(savedCount, totalMedCount) {
+  const bar = $('saveProgressBar');
+  const pct = totalMedCount > 0 ? Math.round(72 + (28 * savedCount) / totalMedCount) : 100;
+  bar.style.width = pct + '%';
+  $('saveCounterX').textContent = savedCount;
+  $('saveStatus').textContent = 'جارٍ حفظ الأدوية على الخادم (' + savedCount + ' من ' + totalMedCount + ')...';
+}
+
+function restoreSubmitBtn() {
+  const btn = $('submitBtn');
+  const spin = $('submitSpinner');
+  const btnTxt = $('submitText');
+  btn.disabled = false;
+  spin.style.display = 'none';
+  btnTxt.textContent = '💾 حفظ وتسجيل البيانات';
+  hideStatus();
+}
+
+async function performSave(batches, totalMedCount, startCount) {
+  if (startCount === undefined) startCount = 0;
+  retryBatches = batches;
+  retryMedCount = totalMedCount;
+  retryBaseCount = startCount;
+  console.log('sending...');
+  setSaveSending();
+  let savedCount = startCount;
+  let lastErr = null;
+  let stopIdx = batches.length;
+  const REQUEST_TIMEOUT = 90000;
+  for (let i = 0; i < batches.length; i++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(batches[i].payload),
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data.status !== 'success') throw new Error(data.message || 'خطأ غير معروف');
+        savedCount += (data.count !== undefined && data.count !== null) ? data.count : batches[i].medCount;
+        setSaveSendProgress(Math.min(savedCount, totalMedCount), totalMedCount);
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (e) {
+      lastErr = e;
+      stopIdx = i;
+      break;
+    }
+  }
+
+  if (lastErr) {
+    retryBatches = batches.slice(stopIdx);
+    retryBaseCount = savedCount;
+    showSaveError(lastErr);
+    return false;
+  }
+
+  const bar = $('saveProgressBar');
+  bar.classList.remove('active');
+  bar.style.width = '100%';
+  const num = $('saveCounterX');
+  num.textContent = savedCount;
+  num.classList.remove('error');
+  const icon = $('saveIcon');
+  icon.textContent = '✅';
+  icon.classList.add('success');
+  $('saveTitle').textContent = 'تم الحفظ بنجاح';
+  $('saveStatus').textContent = 'تم حفظ ' + savedCount + ' دواء بنجاح';
+  await new Promise(r => setTimeout(r, 800));
+  closeOverlay('saveOverlay');
+  restoreSubmitBtn();
+  clearDraft();
+  draftSuppressed = true;
+  $('successMsg').textContent = 'تم تسجيل صرف أدوية القافلة بنجاح';
+  showOverlay('successOverlay');
+  return true;
+}
+
+function showSaveError(err) {
+  const bar = $('saveProgressBar');
+  bar.classList.remove('active');
+  bar.classList.add('error');
+  const num = $('saveCounterX');
+  num.classList.add('error');
+  const icon = $('saveIcon');
+  icon.textContent = '⚠️';
+  icon.classList.add('error');
+  const isTimeout = !!(err && err.name === 'AbortError');
+  $('saveTitle').textContent = isTimeout ? 'انتهت مهلة الاتصال' : 'حدث خطأ في الاتصال';
+  $('saveStatus').textContent = isTimeout
+    ? 'استغرق الاتصال بالخادم وقتًا طويلاً، تحقق من الإنترنت وحاول مرة أخرى.'
+    : 'حدث خطأ في الاتصال، يرجى التأكد من الإنترنت والمحاولة مرة أخرى.';
+  $('saveRetryBtn').style.display = 'inline-block';
+  draftSuppressed = false;
+  restoreSubmitBtn();
+}
+
+function retrySave() {
+  if (retryBatches && retryBatches.length) { draftSuppressed = true; performSave(retryBatches, retryMedCount, retryBaseCount); }
+}
+
 // ─── Cascading drug selection ───
 var drugCache = {};
+
+var drugInflight = {};
 
 function fetchDrugSummary(idx) {
   const center = $('center')?.value;
   console.log('fetchDrugSummary(' + idx + ') center:', center);
-  if (!center) { $('cs_name_' + idx).innerHTML = '<option value="">❌ اختر المركز أولاً</option>'; return; }
-  const cacheKey = 'drugs_' + center;
-  if (drugCache[cacheKey]) { console.log('cache hit for', center); setupCascade(idx, drugCache[cacheKey]); return; }
   const el = $('cs_name_' + idx);
   if (!el) { console.error('cs_name_' + idx + ' not found'); return; }
-  el.innerHTML = '<option value="">⏳ جارٍ التحميل...</option>';
-  fetch(API_URL + '?action=getDrugSummary&center=' + encodeURIComponent(center))
-    .then(r => { console.log('API response status:', r.status); return r.json(); })
-    .then(res => {
-      console.log('API data count:', res.data?.length);
-      if (res.status !== 'success' || !res.data.length) {
-        el.innerHTML = '<option value="">❌ لا توجد أدوية لهذا المركز</option>';
-        return;
-      }
-      drugCache[cacheKey] = res.data;
-      setupCascade(idx, res.data);
-    })
-    .catch(function(err) { console.error('fetch error:', err); el.innerHTML = '<option value="">❌ فشل التحميل</option>'; });
+  if (!center) { el.value = ''; el.placeholder = '❌ اختر المركز أولاً'; hideDrugList(idx); return; }
+  const cacheKey = 'drugs_' + center;
+  if (drugCache[cacheKey]) { console.log('cache hit for', center); setupCascade(idx, drugCache[cacheKey]); return; }
+  el.value = '';
+  el.placeholder = '⏳ جارٍ التحميل...';
+  hideDrugList(idx);
+  if (!drugInflight[cacheKey]) {
+    console.log('fetching drug list for', center);
+    var req = fetch(API_URL + '?action=getDrugSummary&center=' + encodeURIComponent(center))
+      .then(r => { console.log('API response status:', r.status); return r.json(); })
+      .then(res => {
+        console.log('API data count:', res.data?.length);
+        if (res.status !== 'success' || !res.data || !res.data.length) throw new Error('empty');
+        drugCache[cacheKey] = res.data;
+        return res.data;
+      });
+    drugInflight[cacheKey] = req;
+    req.catch(function() {}).then(function() {
+      if (drugInflight[cacheKey] === req) delete drugInflight[cacheKey];
+    });
+  }
+  drugInflight[cacheKey]
+    .then(function(data) { setupCascade(idx, data); })
+    .catch(function(err) {
+      console.error('fetch error:', err);
+      el.value = '';
+      el.placeholder = (err && err.message === 'empty') ? '❌ لا توجد أدوية لهذا المركز' : '❌ فشل التحميل';
+      hideDrugList(idx);
+    });
 }
 
-function setupCascade(idx, data) {
+function setupCascade(idx, data, forceReset) {
   var names = [...new Set(data.map(d => d.name).filter(Boolean))];
   var sel = $('cs_name_' + idx);
   if (!sel) { console.error('setupCascade: cs_name_' + idx + ' not found'); return; }
   console.log('setupCascade(' + idx + ') names:', names, 'first item:', data[0]);
-  sel.innerHTML = '<option value="">— اختر اسم الدواء —</option>' + names.map(n => '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>').join('');
+  sel.placeholder = 'ابدأ بكتابة اسم الدواء للبحث...';
   sel._drugData = data;
-  resetCascadeAfter(idx, 'name');
+  sel._drugNames = names;
+  hideDrugList(idx);
+  var hadValue = !!(sel.value && sel.value.trim());
+  if (forceReset || !hadValue) {
+    sel.value = '';
+    resetCascadeAfter(idx, 'name');
+  }
+}
+
+function getDrugNames(idx) {
+  var el = $('cs_name_' + idx);
+  return el && el._drugNames ? el._drugNames : [];
+}
+
+var drugListTimers = {};
+function scheduleDrugList(idx) {
+  if (drugListTimers[idx]) clearTimeout(drugListTimers[idx]);
+  drugListTimers[idx] = setTimeout(function() { drugListTimers[idx] = null; renderDrugList(idx); }, 150);
+}
+
+function renderDrugList(idx) {
+  var input = $('cs_name_' + idx);
+  var list = $('cs_list_' + idx);
+  if (!input || !list) return;
+  var q = input.value.trim();
+  if (!q) { list.style.display = 'none'; return; }
+  var ql = q.toLowerCase();
+  var matches = getDrugNames(idx).filter(function(n) { return String(n).trim().toLowerCase().startsWith(ql); });
+  list._activeIdx = -1;
+  if (!matches.length) {
+    list.innerHTML = '<div class="autocomplete-empty">لا توجد نتائج مطابقة</div>';
+    list.style.display = 'block';
+    positionDrugList(input, list);
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < matches.length; i++) {
+    html += '<div class="autocomplete-item" data-value="' + escHtml(matches[i]) + '" onmousedown="event.preventDefault();selectDrugName(' + idx + ', this.getAttribute(\'data-value\'))">' + escHtml(matches[i]) + '</div>';
+  }
+  list.innerHTML = html;
+  list.style.display = 'block';
+  positionDrugList(input, list);
+}
+
+function positionDrugList(input, list) {
+  var rect = input.getBoundingClientRect();
+  var spaceBelow = window.innerHeight - rect.bottom - 8;
+  var spaceAbove = rect.top - 8;
+  var showBelow = spaceBelow >= 140 || spaceAbove <= 0;
+  list.style.left = rect.left + 'px';
+  list.style.width = rect.width + 'px';
+  if (showBelow) {
+    list.style.top = (rect.bottom + 4) + 'px';
+    list.style.bottom = 'auto';
+    list.style.maxHeight = Math.max(60, Math.min(260, spaceBelow)) + 'px';
+  } else {
+    list.style.top = 'auto';
+    list.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    list.style.maxHeight = Math.max(60, Math.min(260, spaceAbove)) + 'px';
+  }
+}
+
+function hideDrugList(idx) {
+  var list = $('cs_list_' + idx);
+  if (list) list.style.display = 'none';
+}
+
+function selectDrugName(idx, name) {
+  var input = $('cs_name_' + idx);
+  if (!input || !name) return;
+  input.value = name;
+  hideDrugList(idx);
+  clearFieldError(input);
+  onCSC(idx, 'name');
+}
+
+function setActiveItem(list, items, cur) {
+  items.forEach(function(it, i) { it.classList.toggle('active', i === cur); });
+  if (items[cur] && typeof items[cur].scrollIntoView === 'function') {
+    items[cur].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function onDrugKeydown(idx, e) {
+  if (drugListTimers[idx]) { clearTimeout(drugListTimers[idx]); drugListTimers[idx] = null; renderDrugList(idx); }
+  var list = $('cs_list_' + idx);
+  if (!list || list.style.display === 'none') return;
+  var items = list.querySelectorAll('.autocomplete-item');
+  if (e.key === 'Escape') { hideDrugList(idx); e.preventDefault(); return; }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (!items.length) return;
+    var cur = list._activeIdx >= items.length - 1 ? 0 : list._activeIdx + 1;
+    list._activeIdx = cur;
+    setActiveItem(list, items, cur);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!items.length) return;
+    var cur2 = list._activeIdx <= 0 ? items.length - 1 : list._activeIdx - 1;
+    list._activeIdx = cur2;
+    setActiveItem(list, items, cur2);
+  } else if (e.key === 'Enter') {
+    if (!items.length) return;
+    var target = items[list._activeIdx] || (items.length === 1 ? items[0] : null);
+    if (target) {
+      e.preventDefault();
+      selectDrugName(idx, target.getAttribute('data-value'));
+    }
+  }
 }
 
 function escHtml(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1097,6 +1490,7 @@ if (centerEl) {
   centerEl.addEventListener('change', function() {
     console.log('🔁 Center changed to:', this.value);
     drugCache = {};
+    drugInflight = {};
     document.querySelectorAll('[id^="cs_name_"]').forEach(function(sel) {
       var idx = sel.id.replace('cs_name_', '');
       fetchDrugSummary(idx);
@@ -1111,18 +1505,18 @@ $('mainForm').addEventListener('submit', async function(e) {
   console.log('🚀 submit');
   hideStatus();
   hideAllErrs();
-  let valid = true;
+  document.querySelectorAll('.red').forEach(el => el.classList.remove('red'));
+  const issues = [];
 
   const center = $('center').value;
   const caravanDate = $('caravan_date').value;
 
-  if (!center) { showErr('e_center'); valid = false; }
-  if (!caravanDate) { showErr('e_caravan_date'); valid = false; }
+  if (!center) { showErr('e_center'); $('center').classList.add('red'); issues.push({ el: $('center'), msg: 'يرجى اختيار المركز' }); }
+  if (!caravanDate) { showErr('e_caravan_date'); $('caravan_date').classList.add('red'); issues.push({ el: $('caravan_date'), msg: 'يرجى إدخال تاريخ القافلة' }); }
 
   const prescBlocks = document.querySelectorAll('.presc-block');
   if (!prescBlocks.length) {
-    valid = false;
-    alert('⚠️ يجب إضافة روشتة واحدة على الأقل');
+    issues.push({ el: $('prescriptionList'), msg: 'يرجى إضافة روشتة واحدة على الأقل' });
   }
 
   const prescriptionGroup = [];
@@ -1134,33 +1528,79 @@ $('mainForm').addEventListener('submit', async function(e) {
     const prescFile = fileInput._compressed || fileInput.files[0];
     const doctorName = block.querySelector('.doc-name-input').value.trim();
     const doctorSpec = block.querySelector('.doc-spec-select').value;
+    const prescTag = 'روشتة رقم ' + prescIdx;
 
-    if (!prescFile) { showErr('pe_' + prescNum); valid = false; }
-    if (!doctorName) { showErr('edn_' + prescNum); valid = false; }
-    if (!doctorSpec) { showErr('eds_' + prescNum); valid = false; }
+    if (!prescFile) {
+      const area = block.querySelector('.upload-area');
+      if (area) area.classList.add('red');
+      showErr('pe_' + prescNum);
+      issues.push({ el: area || fileInput, msg: prescTag + ': يرجى رفع صورة الروشتة' });
+    }
+    if (!doctorName) {
+      const dn = block.querySelector('.doc-name-input');
+      if (dn) dn.classList.add('red');
+      showErr('edn_' + prescNum);
+      issues.push({ el: dn, msg: prescTag + ': يرجى إدخال اسم الدكتور' });
+    }
+    if (!doctorSpec) {
+      const ds = block.querySelector('.doc-spec-select');
+      if (ds) ds.classList.add('red');
+      showErr('eds_' + prescNum);
+      issues.push({ el: ds, msg: prescTag + ': يرجى اختيار تخصص الدكتور' });
+    }
 
     const medItems = block.querySelectorAll('.med-item');
     if (!medItems.length) {
-      valid = false;
-      alert('⚠️ الروشتة #' + prescIdx + ' يجب أن تحتوي على دواء واحد على الأقل');
+      issues.push({ el: block.querySelector('[class^="med-list-"]') || block, msg: prescTag + ': يجب إضافة دواء واحد على الأقل' });
     }
 
     const medicineGroup = [];
+    const medFieldLabels = { name: 'اسم الدواء', form: 'شريط / علبة', conc: 'التركيز', type: 'النوع', exp: 'تاريخ الانتهاء' };
     medItems.forEach(item => {
       const firstSel = item.querySelector('[id^="cs_name_"]');
       if (!firstSel) return;
       const idx = firstSel.id.replace('cs_name_', '');
-      const medName = $('med_cs_name_' + idx)?.value?.trim();
-      const medForm = $('med_cs_form_' + idx)?.value?.trim();
-      const medConc = $('med_cs_conc_' + idx)?.value?.trim();
-      const medType = $('med_cs_type_' + idx)?.value?.trim();
-      const medExp = $('med_cs_exp_' + idx)?.value?.trim();
+      const medNumEl = item.querySelector('.med-num');
+      const numMatch = medNumEl ? String(medNumEl.textContent).match(/\d+/) : null;
+      const medTag = 'الدواء رقم ' + (numMatch ? numMatch[0] : idx);
+
+      let medOk = true;
+      Object.keys(medFieldLabels).forEach(key => {
+        const val = $('med_cs_' + key + '_' + idx)?.value?.trim();
+        if (!val) {
+          const vis = $('cs_' + key + '_' + idx);
+          if (vis) vis.classList.add('red');
+          issues.push({ el: vis, msg: medTag + ': يرجى استكمال ' + medFieldLabels[key] });
+          medOk = false;
+        }
+      });
       const medQty = $('cs_qty_' + idx)?.value?.trim();
-      if (!medName || !medForm || !medConc || !medType || !medExp || !medQty) { alert('⚠️ الروشتة #' + prescIdx + ' — الدواء #' + idx + ' لم يتم اختيار جميع بياناته (اسم الدواء، شريط/علبة، التركيز، النوع، تاريخ الانتهاء، الكمية)'); valid = false; return; }
-      var mQty = parseInt(medQty);
-      var maxStock = parseInt($('cs_stock_' + idx)?._maxQty) || 0;
-      if (mQty > maxStock) { showErr('e_cs_qty_' + idx, 'الكمية (' + mQty + ') تتجاوز المخزون (' + maxStock + ')'); valid = false; return; }
-      medicineGroup.push({ medicine_name: medName, med_form: medForm, med_conc: medConc, med_type: medType, med_exp: medExp, quantity: mQty });
+      if (!medQty) {
+        const qtyEl = $('cs_qty_' + idx);
+        if (qtyEl) qtyEl.classList.add('red');
+        issues.push({ el: qtyEl, msg: medTag + ': يرجى استكمال الكمية المصروفة' });
+        medOk = false;
+      } else {
+        var mQty = parseInt(medQty);
+        var maxStock = parseInt($('cs_stock_' + idx)?._maxQty) || 0;
+        if (mQty > maxStock) {
+          const qtyEl = $('cs_qty_' + idx);
+          if (qtyEl) qtyEl.classList.add('red');
+          showErr('e_cs_qty_' + idx, 'الكمية (' + mQty + ') تتجاوز المخزون (' + maxStock + ')');
+          issues.push({ el: qtyEl, msg: medTag + ': الكمية (' + mQty + ') تتجاوز المخزون المتاح (' + maxStock + ')' });
+          medOk = false;
+        }
+      }
+      if (medOk) {
+        medicineGroup.push({
+          medicine_name: $('med_cs_name_' + idx)?.value?.trim(),
+          med_form: $('med_cs_form_' + idx)?.value?.trim(),
+          med_conc: $('med_cs_conc_' + idx)?.value?.trim(),
+          med_type: $('med_cs_type_' + idx)?.value?.trim(),
+          med_exp: $('med_cs_exp_' + idx)?.value?.trim(),
+          quantity: mQty
+        });
+      }
     });
 
     prescriptionGroup.push({
@@ -1171,7 +1611,14 @@ $('mainForm').addEventListener('submit', async function(e) {
     });
   }
 
-  if (!valid) { focusFirstError(); return; }
+  if (issues.length) {
+    const msg = 'يرجى استكمال الحقول المطلوبة المظللة باللون الأحمر: ' + issues.map(i => i.msg).join('، ');
+    showStatus(msg, true);
+    const first = issues[0].el;
+    if (first && typeof first.scrollIntoView === 'function') first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (first && typeof first.focus === 'function') { try { first.focus({ preventScroll: true }); } catch (err2) { try { first.focus(); } catch (err3) {} } }
+    return;
+  }
 
   const btn = $('submitBtn');
   const spin = $('submitSpinner');
@@ -1179,65 +1626,297 @@ $('mainForm').addEventListener('submit', async function(e) {
   btn.disabled = true;
   spin.style.display = 'inline-block';
   btnTxt.textContent = '⏳ جارٍ الحفظ...';
-  showStatus('جارٍ رفع الصور والبيانات... برجاء الانتظار');
+
+  let totalMedCount = 0;
+  prescriptionGroup.forEach(p => { totalMedCount += (p.medicine_group || []).length; });
+
+  draftSuppressed = true;
+  openSaveModal(totalMedCount);
 
   try {
-    const prescData = await Promise.all(prescriptionGroup.map(async p => ({
-      prescription_photo: await toBase64(p.prescription_photo),
-      doctor_name: p.doctor_name,
-      doctor_specialty: p.doctor_specialty,
-      medicine_group: p.medicine_group
-    })));
+    const prescData = [];
+    for (let pi = 0; pi < prescriptionGroup.length; pi++) {
+      const p = prescriptionGroup[pi];
+      setSavePrepProgress(pi + 1, prescriptionGroup.length);
+      const photo = await toBase64(p.prescription_photo);
+      prescData.push({
+        prescription_photo: photo,
+        doctor_name: p.doctor_name,
+        doctor_specialty: p.doctor_specialty,
+        medicine_group: p.medicine_group
+      });
+    }
 
-    const payload = {
+    const fullPayload = {
       action: 'sarf_alqawafel',
       center: center,
       caravan_date: caravanDate,
       prescription_group: prescData
     };
+    const BUNDLE_MAX = 6 * 1024 * 1024;
+    const batches = (new Blob([JSON.stringify(fullPayload)]).size <= BUNDLE_MAX)
+      ? [{ payload: fullPayload, medCount: totalMedCount }]
+      : prescData.map(p => ({
+          payload: {
+            action: 'sarf_alqawafel',
+            center: center,
+            caravan_date: caravanDate,
+            prescription_group: [p]
+          },
+          medCount: (p.medicine_group || []).length
+        }));
 
-    console.log('sending...');
-    let lastErr = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        showStatus('جارٍ الإرسال... المحاولة ' + attempt + '/3');
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        btn.disabled = false; spin.style.display = 'none';
-        btnTxt.textContent = '💾 حفظ وتسجيل البيانات';
-        hideStatus();
-        if (data.status === 'success') {
-          $('successMsg').textContent = 'تم تسجيل صرف أدوية القافلة بنجاح';
-          showOverlay('successOverlay');
-          return;
-        } else {
-          throw new Error(data.message || 'خطأ غير معروف');
-        }
-      } catch (err) {
-        lastErr = err;
-        if (attempt < 3) {
-          showStatus('⚠️ فشلت المحاولة ' + attempt + '، إعادة المحاولة...', true);
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
-    }
-    throw lastErr;
+    await performSave(batches, totalMedCount);
   } catch (err) {
-    btn.disabled = false; spin.style.display = 'none';
-    btnTxt.textContent = '💾 حفظ وتسجيل البيانات';
-    hideStatus();
-    $('errorMsg').textContent = 'تعذّر الاتصال: ' + (err.message || 'خطأ في الشبكة') + '. تأكد من اتصال الإنترنت وحاول مرة أخرى.';
-    showOverlay('errorOverlay');
+    showSaveError(err);
   }
 });
 
+// ─── Auto-save draft (localStorage) ───
+var DRAFT_KEY = 'sarf_alqawafel_draft';
+var draftTimer = null;
+var draftDirty = false;
+var draftSuppressed = false;
+
+function readDraft() {
+  try {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  draftDirty = false;
+}
+
+function collectDraftData() {
+  var center = $('center')?.value || '';
+  var caravan_date = $('caravan_date')?.value || '';
+  var blocks = document.querySelectorAll('.presc-block');
+  var prescriptions = [];
+  blocks.forEach(function(block) {
+    var docName = block.querySelector('.doc-name-input')?.value?.trim() || '';
+    var docSpec = block.querySelector('.doc-spec-select')?.value || '';
+    var meds = [];
+    block.querySelectorAll('.med-item').forEach(function(m) {
+      var firstSel = m.querySelector('[id^="cs_name_"]');
+      if (!firstSel) return;
+      var idx = firstSel.id.replace('cs_name_', '');
+      meds.push({
+        medicine_name: $('med_cs_name_' + idx)?.value?.trim() || $('cs_name_' + idx)?.value?.trim() || '',
+        med_form: $('med_cs_form_' + idx)?.value?.trim() || $('cs_form_' + idx)?.value || '',
+        med_conc: $('med_cs_conc_' + idx)?.value?.trim() || $('cs_conc_' + idx)?.value || '',
+        med_type: $('med_cs_type_' + idx)?.value?.trim() || $('cs_type_' + idx)?.value || '',
+        med_exp: $('med_cs_exp_' + idx)?.value?.trim() || $('cs_exp_' + idx)?.value || '',
+        quantity: $('cs_qty_' + idx)?.value || ''
+      });
+    });
+    prescriptions.push({ doctor_name: docName, doctor_specialty: docSpec, medicines: meds });
+  });
+  var hasAny = center || caravan_date || prescriptions.some(function(p) {
+    return p.doctor_name || p.doctor_specialty || p.medicines.some(function(md) {
+      return md.medicine_name || md.med_form || md.med_conc || md.med_type || md.med_exp || md.quantity;
+    });
+  });
+  if (!hasAny) return null;
+  return { savedAt: Date.now(), center: center, caravan_date: caravan_date, prescriptions: prescriptions };
+}
+
+function saveDraft() {
+  if (draftSuppressed) return;
+  var data = collectDraftData();
+  if (!data) { clearDraft(); return; }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+function scheduleDraftSave() {
+  draftSuppressed = false;
+  draftDirty = true;
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(function() {
+    draftTimer = null;
+    if (draftDirty) { saveDraft(); draftDirty = false; }
+  }, 500);
+}
+
+function flushDraft() {
+  if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
+  if (draftDirty) { saveDraft(); draftDirty = false; }
+}
+
+function onFormActivity() { scheduleDraftSave(); }
+$('mainForm').addEventListener('input', onFormActivity);
+$('mainForm').addEventListener('change', onFormActivity);
+
+window.addEventListener('beforeunload', flushDraft);
+window.addEventListener('pagehide', flushDraft);
+
+setInterval(function() {
+  if (draftDirty && !draftSuppressed) { saveDraft(); draftDirty = false; }
+}, 3000);
+
+// ─── Draft restore ───
+function checkDraftOnLoad() {
+  var draft = readDraft();
+  if (!draft) return;
+  var hasContent = draft.center || draft.caravan_date || (draft.prescriptions || []).some(function(p) {
+    return p.doctor_name || p.doctor_specialty || (p.medicines || []).some(function(md) {
+      return md.medicine_name || md.med_form || md.med_conc || md.med_type || md.med_exp || md.quantity;
+    });
+  });
+  if (!hasContent) { clearDraft(); return; }
+  var msgEl = $('draftMsg');
+  if (msgEl && draft.savedAt) {
+    var dt = new Date(draft.savedAt);
+    msgEl.textContent = 'تم العثور على بيانات غير مكتملة من محاولة سابقة بتاريخ ' + dt.toLocaleDateString('ar-EG') + ' الساعة ' + dt.toLocaleTimeString('ar-EG') + '، هل تريد استعادتها؟';
+  }
+  showOverlay('draftOverlay');
+}
+
+function restoreDraft() {
+  closeOverlay('draftOverlay');
+  var draft = readDraft();
+  fillDraft(draft || {});
+  hideStatus();
+  showStatus('✅ تم استعادة بياناتك السابقة، يمكنك إكمال التسجيل. إن كنت قد رفعت صور الروشتات من قبل، يُرجى إعادة رفعها فقط (الصور لا تُحفظ تلقائيًا)', false);
+}
+
+function discardDraft() {
+  closeOverlay('draftOverlay');
+  clearDraft();
+  hideStatus();
+  showStatus('🗑 تم تجاهل البيانات السابقة وبدأت استمارة جديدة', false);
+}
+
+function fillDraft(draft) {
+  $('mainForm').reset();
+  $('prescriptionList').innerHTML = '';
+  document.querySelectorAll('.field-error').forEach(e => e.style.display = 'none');
+  document.querySelectorAll('.error,.valid').forEach(e => e.classList.remove('error','valid'));
+  hideStatus();
+  prescCount = 0;
+  medCounter = 0;
+  updateProgress();
+  if (draft.center) $('center').value = draft.center;
+  if (draft.caravan_date) $('caravan_date').value = draft.caravan_date;
+  var prescs = draft.prescriptions || [];
+  if (!prescs.length) { addPrescription(); updateProgress(); return; }
+  prescs.forEach(function(p) {
+    addPrescription(true);
+    var block = document.querySelector('.presc-block:last-child');
+    if (!block) return;
+    var dn = block.querySelector('.doc-name-input');
+    var ds = block.querySelector('.doc-spec-select');
+    if (dn) dn.value = p.doctor_name || '';
+    if (ds) ds.value = p.doctor_specialty || '';
+    var meds = p.medicines || [];
+    var medList = block.querySelector('[class^="med-list-"]');
+    if (!medList) return;
+    if (!meds.length) {
+      var autoMed = medList.querySelector('.med-item');
+      if (autoMed) removeMedicine(autoMed.id, prescCount);
+      return;
+    }
+    buildDraftMedItems(medList, prescCount, meds);
+    medList.querySelectorAll('.med-item').forEach(function(item, mi) {
+      var firstSel = item.querySelector('[id^="cs_name_"]');
+      if (!firstSel) return;
+      var idx = firstSel.id.replace('cs_name_', '');
+      fillMedDraft(idx, meds[mi]);
+    });
+  });
+  updateProgress();
+}
+
+function buildDraftMedItems(medList, prescId, meds) {
+  for (var mi = 1; mi < meds.length; mi++) {
+    addMedicine(prescId, true);
+  }
+}
+
+function setMedSelectValue(sel, val) {
+  if (!sel || val === undefined || val === null || val === '') return;
+  val = String(val);
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === val) { sel.value = val; return; }
+  }
+  var opt = document.createElement('option');
+  opt.value = val;
+  opt.textContent = val;
+  sel.appendChild(opt);
+  sel.value = val;
+}
+
+function fillMedDraft(idx, m) {
+  var nameEl = $('cs_name_' + idx);
+  if (!nameEl) return;
+  var fillAll = function() {
+    var hName = $('med_cs_name_' + idx);
+    if (hName) hName.value = m.medicine_name || '';
+    if (m.medicine_name) nameEl.value = m.medicine_name;
+    ['form','conc','type','exp'].forEach(function(f) {
+      var h = $('med_cs_' + f + '_' + idx);
+      var val = m['med_' + f];
+      if (h) h.value = val || '';
+      var row = $('cs_row_' + f + '_' + idx);
+      var sel = $('cs_' + f + '_' + idx);
+      if (val) {
+        if (row) row.style.display = 'block';
+        setMedSelectValue(sel, val);
+      }
+    });
+    var qtyRow = $('cs_row_qty_' + idx);
+    var qty = $('cs_qty_' + idx);
+    var stock = $('cs_stock_' + idx);
+    if (qtyRow) qtyRow.style.display = 'block';
+    if (qty && m.quantity) qty.value = m.quantity;
+    if (stock && m.quantity && !(stock._maxQty > 0)) {
+      stock._maxQty = parseInt(m.quantity) || 0;
+      stock.value = 'المخزون المتاح: ' + stock._maxQty;
+    }
+    checkQtyStock(idx);
+    updateProgress();
+  };
+  var nameInList = function() {
+    if (!m.medicine_name || !nameEl._drugData || !nameEl._drugData.length) return false;
+    return nameEl._drugData.some(function(d) { return String(d.name || '').trim() === String(m.medicine_name).trim(); });
+  };
+  var apply = function() {
+    if (nameInList()) {
+      nameEl.value = m.medicine_name;
+      onCSC(idx, 'name');
+      var fields = ['form','conc','type','exp'];
+      var cur = 0;
+      (function step() {
+        if (cur >= fields.length) { fillAll(); return; }
+        var f = fields[cur];
+        var val = m['med_' + f];
+        var sel = $('cs_' + f + '_' + idx);
+        if (val && sel) { setMedSelectValue(sel, val); onCSC(idx, f); }
+        cur++;
+        setTimeout(step, 0);
+      })();
+    } else {
+      fillAll();
+    }
+  };
+  if (nameInList() || !$('center').value) { apply(); return; }
+  var iv = setInterval(function() {
+    if (nameEl._drugData && nameEl._drugData.length) { clearInterval(iv); apply(); }
+  }, 120);
+  setTimeout(function() { if (!(nameEl._drugData && nameEl._drugData.length)) { clearInterval(iv); apply(); } }, 3000);
+}
+
 addPrescription();
 updateProgress();
+
+window.addEventListener('scroll', function() {
+  document.querySelectorAll('.autocomplete-list').forEach(function(l) { l.style.display = 'none'; });
+}, true);
+window.addEventListener('resize', function() {
+  document.querySelectorAll('.autocomplete-list').forEach(function(l) { l.style.display = 'none'; });
+});
 
 // ---- offline utils ----
 var CSV_FIELDS = ['center','caravan_date','doctor_name','doctor_specialty','medicine_name','med_form','med_conc','med_type','med_exp','quantity'];
@@ -1448,6 +2127,8 @@ window.exportFormXLS = function(fid, flabel, fields, headers) {
   downloadXLS(table, flabel + '_' + new Date().toISOString().slice(0,10) + '.csv');
 };
 window.downloadCSVTemplate = function(flabel) { downloadCSVTemplate(flabel, CSV_FIELDS, CSV_HEADERS); };
+
+checkDraftOnLoad();
 </script>
 </div>
 </body>
