@@ -583,6 +583,24 @@ function importKoboHistoricalData() {
     'markazi': 'مركزي'
   };
 
+  var MED_TYPE_MAP = {
+    'akras': 'أقراص', 'kapsol': 'كبسول', 'sharab': 'شراب', 'fawar': 'فوار',
+    'mahloel': 'محلول', 'marham': 'مرهم', 'kream': 'كريم', 'gel': 'جل',
+    'ambol': 'أمبول', 'bakhakh': 'بخاخ', 'notat': 'نقط', 'mademada': 'مضمضة'
+  };
+
+  var MED_UNIT_MAP = {
+    'sherit': 'شريط', 'alba': 'علبة', 'aena_magania': 'عينة مجانية'
+  };
+
+  var MED_SPECIALTY_MAP = {
+    'daght': 'ضغط', 'sukar': 'سكر', 'kalb': 'قلب وأوعية دموية', 'batna': 'باطنة',
+    'atfal': 'اطفال', 'moskenat': 'مسكنات', 'modat_hayaweya': 'مضادات حيوية',
+    'vitamins': 'فيتامينات', 'masalek': 'مسالك', 'ramed': 'رمد', 'gildeya': 'جلدية',
+    'ezam': 'عظام', 'mokh_a3sab': 'مخ وأعصاب', 'anf_ozon': 'أنف وأذن',
+    'nesa_tawled': 'نساء وتوليد', 'sadr': 'صدر'
+  };
+
   var config = FORMS.hser_edwia;
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sheet = ss.getSheetByName(config.tab);
@@ -624,15 +642,18 @@ function importKoboHistoricalData() {
         rows.push(['KB-' + uuid, timestamp, date, sec, '', '', '', '', '', '', '', '']);
       } else {
         meds.forEach(function(m, i) {
+          var rawType = m.med_type || m['meds/med_type'] || '';
+          var rawUnit = m.med_unit || m['meds/med_unit'] || '';
+          var rawSpec = m.med_specialty || m['meds/med_specialty'] || '';
           rows.push(['KB-' + uuid + '-' + (i + 1), timestamp, date, sec,
             m.med_name || m['meds/med_name'] || '',
             m.med_focus || m['meds/med_focus'] || '',
             m.med_ava || m['meds/med_ava'] || '',
-            m.med_type || m['meds/med_type'] || '',
-            m.med_unit || m['meds/med_unit'] || '',
+            MED_TYPE_MAP[rawType] || rawType,
+            MED_UNIT_MAP[rawUnit] || rawUnit,
             m.med_qty || m['meds/med_qty'] || '',
             m.med_exp || m['meds/med_exp'] || '',
-            m.med_specialty || m['meds/med_specialty'] || ''
+            MED_SPECIALTY_MAP[rawSpec] || rawSpec
           ]);
         });
       }
@@ -655,5 +676,62 @@ function importKoboHistoricalData() {
   var msg = 'تم استيراد ' + rows.length + ' صف من ' + Object.keys(seen).length + ' استمارة إلى حصر الأدوية.';
   Logger.log('[IMPORT-KOBO] ' + msg);
   return msg;
+}
+
+// ─── تصحيح التسميات العربية للصفوف المستوردة سابقاً من Kobo ───
+function fixExistingKoboLabels() {
+  var MED_TYPE_MAP = {
+    'akras': 'أقراص', 'kapsol': 'كبسول', 'sharab': 'شراب', 'fawar': 'فوار',
+    'mahloel': 'محلول', 'marham': 'مرهم', 'kream': 'كريم', 'gel': 'جل',
+    'ambol': 'أمبول', 'bakhakh': 'بخاخ', 'notat': 'نقط', 'mademada': 'مضمضة'
+  };
+
+  var MED_UNIT_MAP = {
+    'sherit': 'شريط', 'alba': 'علبة', 'aena_magania': 'عينة مجانية'
+  };
+
+  var MED_SPECIALTY_MAP = {
+    'daght': 'ضغط', 'sukar': 'سكر', 'kalb': 'قلب وأوعية دموية', 'batna': 'باطنة',
+    'atfal': 'اطفال', 'moskenat': 'مسكنات', 'modat_hayaweya': 'مضادات حيوية',
+    'vitamins': 'فيتامينات', 'masalek': 'مسالك', 'ramed': 'رمد', 'gildeya': 'جلدية',
+    'ezam': 'عظام', 'mokh_a3sab': 'مخ وأعصاب', 'anf_ozon': 'أنف وأذن',
+    'nesa_tawled': 'نساء وتوليد', 'sadr': 'صدر'
+  };
+
+  var COL_ID = 0;
+  var COL_TYPE = 7;
+  var COL_UNIT = 8;
+  var COL_SPEC = 11;
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('حصر الأدوية');
+  if (!sheet) { Logger.log('[FIX-KOBO-LABELS] تبويب حصر الأدوية غير موجود'); return; }
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { Logger.log('[FIX-KOBO-LABELS] لا توجد بيانات'); return; }
+
+  var data = sheet.getRange(1, 1, lastRow, 12).getValues();
+  var fixedType = 0;
+  var fixedUnit = 0;
+  var fixedSpec = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var id = String(data[i][COL_ID] || '').trim();
+    if (id.indexOf('KB-') !== 0) continue;
+
+    var t = String(data[i][COL_TYPE] || '').trim();
+    if (MED_TYPE_MAP.hasOwnProperty(t)) { data[i][COL_TYPE] = MED_TYPE_MAP[t]; fixedType++; }
+
+    var u = String(data[i][COL_UNIT] || '').trim();
+    if (MED_UNIT_MAP.hasOwnProperty(u)) { data[i][COL_UNIT] = MED_UNIT_MAP[u]; fixedUnit++; }
+
+    var s = String(data[i][COL_SPEC] || '').trim();
+    if (MED_SPECIALTY_MAP.hasOwnProperty(s)) { data[i][COL_SPEC] = MED_SPECIALTY_MAP[s]; fixedSpec++; }
+  }
+
+  if (fixedType > 0) sheet.getRange(1, COL_TYPE + 1, lastRow, 1).setValues(data.map(function(r) { return [r[COL_TYPE]]; }));
+  if (fixedUnit > 0) sheet.getRange(1, COL_UNIT + 1, lastRow, 1).setValues(data.map(function(r) { return [r[COL_UNIT]]; }));
+  if (fixedSpec > 0) sheet.getRange(1, COL_SPEC + 1, lastRow, 1).setValues(data.map(function(r) { return [r[COL_SPEC]]; }));
+
+  Logger.log('[FIX-KOBO-LABELS] صفوف مصححة — النوع: ' + fixedType + ' | شريط/علبة: ' + fixedUnit + ' | التخصص: ' + fixedSpec);
 }
 
