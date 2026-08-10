@@ -563,3 +563,97 @@ function respondJson(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// ─── استيراد البيانات التاريخية من KoboToolbox إلى حصر الأدوية ───
+function importKoboHistoricalData() {
+  var TOKEN = 'dae3d03febe49b5ae7668fe19730327abf645652';
+  var FORM_UID = 'a4AB8Ut3VZrjiKMMA6Umi6';
+  var BASE_URL = 'https://eu.kobotoolbox.org/api/v2/assets/' + FORM_UID + '/data/?format=json';
+  var PAGE_SIZE = 3000;
+  var CHUNK = 500;
+  var CENTER_CODE_MAP = {
+    'ashmon': 'أشمون',
+    'elbagour': 'الباجور',
+    'elsadat': 'السادات',
+    'elshohadaa': 'الشهداء',
+    'berkat_elsabaa': 'بركة السبع',
+    'tala': 'تلا',
+    'shebin_elkom': 'شبين الكوم',
+    'quweisna': 'قويسنا',
+    'menouf': 'منوف',
+    'markazi': 'مركزي'
+  };
+
+  var config = FORMS.hser_edwia;
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(config.tab);
+  if (!sheet) {
+    sheet = ss.insertSheet(config.tab);
+    sheet.appendRow(config.headers);
+    sheet.getRange(1, 1, 1, config.headers.length).setFontWeight('bold').setBackground('#0f766e').setFontColor('#ffffff');
+  }
+
+  var processed = {};
+  var existing = sheet.getRange(1, 1, Math.max(1, sheet.getLastRow()), 1).getValues();
+  for (var ei = 1; ei < existing.length; ei++) {
+    var id = String(existing[ei][0] || '').trim();
+    if (id.indexOf('KB-') === 0) processed[id.substring(3).replace(/-\d+$/, '')] = true;
+  }
+
+  var rows = [];
+  var seen = {};
+  var url = BASE_URL + '&limit=' + PAGE_SIZE;
+  var page = 0;
+  while (url) {
+    page++;
+    var resp = UrlFetchApp.fetch(url, { headers: { Authorization: 'Token ' + TOKEN }, muteHttpExceptions: true });
+    var code = resp.getResponseCode();
+    if (code < 200 || code >= 300) {
+      console.error('[IMPORT-KOBO] فشل جلب الصفحة ' + page + ' (HTTP ' + code + '): ' + resp.getContentText());
+      throw new Error('فشل جلب البيانات من KoboToolbox (HTTP ' + code + ')');
+    }
+    var parsed = JSON.parse(resp.getContentText());
+    (parsed.results || []).forEach(function(r) {
+      var uuid = String(r._uuid || r._id || '').trim();
+      if (!uuid || processed[uuid] || seen[uuid]) return;
+      seen[uuid] = true;
+      var timestamp = r._submission_time || r._created || '';
+      var date = r.reg_date || '';
+      var sec = CENTER_CODE_MAP[r.center] || r.center || '';
+      var meds = r.meds || [];
+      if (meds.length === 0) {
+        rows.push(['KB-' + uuid, timestamp, date, sec, '', '', '', '', '', '', '', '']);
+      } else {
+        meds.forEach(function(m, i) {
+          rows.push(['KB-' + uuid + '-' + (i + 1), timestamp, date, sec,
+            m.med_name || m['meds/med_name'] || '',
+            m.med_focus || m['meds/med_focus'] || '',
+            m.med_ava || m['meds/med_ava'] || '',
+            m.med_type || m['meds/med_type'] || '',
+            m.med_unit || m['meds/med_unit'] || '',
+            m.med_qty || m['meds/med_qty'] || '',
+            m.med_exp || m['meds/med_exp'] || '',
+            m.med_specialty || m['meds/med_specialty'] || ''
+          ]);
+        });
+      }
+    });
+    url = parsed.next || null;
+  }
+
+  if (rows.length === 0) {
+    var msg0 = 'لا توجد سجلات جديدة للاستيراد (' + Object.keys(seen).length + ' مكرر أو مستورد مسبقاً).';
+    Logger.log('[IMPORT-KOBO] ' + msg0);
+    return msg0;
+  }
+
+  for (var c = 0; c < rows.length; c += CHUNK) {
+    var chunk = rows.slice(c, c + CHUNK);
+    appendRows(sheet, chunk);
+    try { distributeSingleRow(config, chunk); } catch (e) { console.error('[IMPORT-KOBO] خطأ في التوزيع للدفعة ' + c + ': ' + e); }
+  }
+
+  var msg = 'تم استيراد ' + rows.length + ' صف من ' + Object.keys(seen).length + ' استمارة إلى حصر الأدوية.';
+  Logger.log('[IMPORT-KOBO] ' + msg);
+  return msg;
+}
+
