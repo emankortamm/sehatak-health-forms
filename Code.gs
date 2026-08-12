@@ -469,6 +469,7 @@ function distributeAllData() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var root = DriveApp.getFolderById(DATA_ROOT_FOLDER_ID);
   TAB_FOLDER_MAP.forEach(function(cfg) {
+    if (cfg.tab === 'حصر الأدوية') return;
     var sheet = ss.getSheetByName(cfg.tab);
     if (!sheet) return;
     var data = sheet.getDataRange().getValues();
@@ -506,6 +507,7 @@ function distributeAllData() {
 }
 
 function distributeSingleRow(formConfig, rows) {
+  if (formConfig.tab === 'حصر الأدوية') return;
   if (!rows || !rows.length) return;
   var cfg = null;
   for (var idx = 0; idx < TAB_FOLDER_MAP.length; idx++) {
