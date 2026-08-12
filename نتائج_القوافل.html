@@ -564,6 +564,18 @@ body {
   </div>
 </div>
 
+<div class="overlay" id="draftOverlay">
+  <div class="overlay-card">
+    <div class="ov-icon">📝</div>
+    <h2>مسودة غير مكتملة</h2>
+    <p>تم العثور على بيانات غير مكتملة من محاولة سابقة، هل تريد استعادتها؟</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-overlay primary" onclick="restoreDraftAndFill()">استعادة البيانات</button>
+      <button class="btn-overlay danger" onclick="discardDraftAndStart()">بدء استمارة جديدة</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzTkmFGEYZHEhQssU38zv65WZcQ4MqWMeIWI2vUmG8JpBIQjpwCnBUg846RSNMtTEFW/exec";
 
@@ -588,10 +600,11 @@ function updateProgress() {
 document.querySelectorAll('input,select,textarea').forEach(el => el.addEventListener('input', updateProgress));
 
 let specCount = 0;
+let restoringDraft = false;
 
 function addSpecialty() {
   const last = $('specialtiesList').lastElementChild;
-  if (last) {
+  if (last && !restoringDraft) {
     const fields = [last.querySelector('[name="specialty"]'), last.querySelector('[name="doctor_name"]'), last.querySelector('[name="spec_checkups"]'), last.querySelector('[name="time_spent"]')];
     let ok = true;
     fields.forEach(f => { if (!f || !f.value || !f.value.trim()) ok = false; });
@@ -626,6 +639,8 @@ function addSpecialty() {
           <option>جلدية</option>
           <option>قلب</option>
           <option>جراحة</option>
+          <option>المسالك البولية</option>
+          <option>التغذية</option>
         </select>
       </div>
       <div class="field">
@@ -742,6 +757,7 @@ $('mainForm').addEventListener('submit', async function(e) {
 
         if (data.status === 'success') {
           $('successMsg').textContent = `تم تسجيل نتائج قافلة "${center}" بنجاح`;
+          clearDraft();
           showOverlay('successOverlay');
           return;
         } else {
@@ -767,8 +783,82 @@ $('mainForm').addEventListener('submit', async function(e) {
   }
 });
 
+// ---- Auto-save Draft (localStorage) ----
+const DRAFT_KEY = 'draft_nata2_alqawafel';
+
+function saveDraft() {
+  try {
+    const d = collectFormData();
+    if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch (e) { /* ignore */ }
+}
+function loadDraft() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return null; }
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+}
+function draftHasContent(d) {
+  if (!d) return false;
+  if (d.center || d.total_checkups || d.total_labs || d.other_interventions || d.other_interventions_count) return true;
+  return (d.specialties || []).some(function(s) {
+    return !!(s && (s.specialty || s.doctor_name || s.spec_checkups || s.time_spent));
+  });
+}
+let draftTimer = null;
+function scheduleDraftSave() {
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 600);
+}
+function restoreDraft(draft) {
+  if (!draft) return;
+  if (draft.center) $('center').value = draft.center;
+  if (draft.total_checkups !== undefined && draft.total_checkups !== null) $('total_checkups').value = draft.total_checkups;
+  if (draft.total_labs !== undefined && draft.total_labs !== null) $('total_labs').value = draft.total_labs;
+  if (draft.other_interventions !== undefined && draft.other_interventions !== null) $('other_interventions').value = draft.other_interventions;
+  if (draft.other_interventions_count !== undefined && draft.other_interventions_count !== null) $('other_interventions_count').value = draft.other_interventions_count;
+  $('specialtiesList').innerHTML = '';
+  specCount = 0;
+  restoringDraft = true;
+  const specs = (draft.specialties && draft.specialties.length) ? draft.specialties : [{}];
+  specs.forEach(function(s) {
+    addSpecialty();
+    const item = $('specialtiesList').lastElementChild;
+    if (!item) return;
+    const inp = item.querySelectorAll('[name="specialty"],[name="doctor_name"],[name="spec_checkups"],[name="time_spent"]');
+    if (inp[0]) inp[0].value = s.specialty || '';
+    if (inp[1]) inp[1].value = s.doctor_name || '';
+    if (inp[2]) inp[2].value = s.spec_checkups || '';
+    if (inp[3]) inp[3].value = s.time_spent || '';
+  });
+  restoringDraft = false;
+  updateProgress();
+}
+let pendingDraft = null;
+function showDraftDialog(draft) { pendingDraft = draft; showOverlay('draftOverlay'); }
+function restoreDraftAndFill() {
+  closeOverlay('draftOverlay');
+  restoreDraft(pendingDraft);
+  pendingDraft = null;
+}
+function discardDraftAndStart() {
+  closeOverlay('draftOverlay');
+  clearDraft();
+  resetForm();
+  pendingDraft = null;
+}
+function initDraftRestore() {
+  const draft = loadDraft();
+  if (draft && draftHasContent(draft)) showDraftDialog(draft);
+}
+document.addEventListener('input', scheduleDraftSave);
+document.addEventListener('change', scheduleDraftSave);
+window.addEventListener('pagehide', function() { if (draftTimer) clearTimeout(draftTimer); saveDraft(); });
+window.addEventListener('beforeunload', function() { if (draftTimer) clearTimeout(draftTimer); saveDraft(); });
+
 addSpecialty();
 updateProgress();
+initDraftRestore();
 
 // ---- offline utils ----
 var CSV_FIELDS = ['center','total_checkups','total_labs','other_interventions','other_interventions_count','specialty','doctor_name','spec_checkups','time_spent'];
